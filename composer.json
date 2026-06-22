@@ -1,0 +1,38 @@
+{
+    "name": "dp0/filament-sanchaya",
+    "description": "A powerful file manager plugin for Filament PHP with media picker support.",
+    "type": "library",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "DP0",
+            "email": "dineshphuyel20@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.4",
+        "ext-zip": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "DP0\\Sanchaya\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "DP0\\Sanchaya\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "DP0\\Sanchaya\\SanchayaServiceProvider"
+            ]
+        }
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}
