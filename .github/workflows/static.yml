@@ -29,7 +29,7 @@ jobs:
         uses: actions/upload-pages-artifact@v3
         with:
           # Deploy only the /docs folder
-          path: 'docs'
+          path: 'doc'
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v5
