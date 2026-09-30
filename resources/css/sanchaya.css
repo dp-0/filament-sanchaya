@@ -1,0 +1,4 @@
+/* Prevent Alpine.js x-cloak elements from flashing before Alpine initialises */
+[x-cloak] {
+    display: none !important;
+}

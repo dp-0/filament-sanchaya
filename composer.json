@@ -1,0 +1,59 @@
+{
+    "name": "dp0/filament-sanchaya",
+    "description": "A powerful file manager plugin for Filament PHP with media picker support.",
+    "homepage": "https://filament-sanchaya.dineshphuyel.com.np/",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "filament-sanchaya",
+        "sanchaya",
+        "filament",
+        "filament-plugin",
+        "laravel",
+        "livewire",
+        "file-manager",
+        "media-picker",
+        "media-library",
+        "file-browser",
+        "attachments"
+    ],
+    "authors": [
+        {
+            "name": "DP0",
+            "email": "dineshphuyel20@gmail.com"
+        }
+    ],
+    "require": {
+        "php": "^8.3 || ^8.4",
+        "ext-zip": "*",
+        "filament/filament": "^5.0",
+        "illuminate/contracts": "^11.0 || ^12.0 || ^13.0",
+        "illuminate/support": "^11.0 || ^12.0 || ^13.0",
+        "livewire/livewire": "^3.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "DP0\\Sanchaya\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "DP0\\Sanchaya\\Tests\\": "tests/"
+        }
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "DP0\\Sanchaya\\SanchayaServiceProvider"
+            ]
+        }
+    },
+    "support": {
+        "docs": "https://filament-sanchaya.dineshphuyel.com.np/",
+        "issues": "https://github.com/dp-0/filament-sanchaya/issues",
+        "source": "https://github.com/dp-0/filament-sanchaya"
+    },
+    "config": {
+        "sort-packages": true
+    }
+}
