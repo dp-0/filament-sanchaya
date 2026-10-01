@@ -17,7 +17,12 @@
 				event.preventDefault();
 				$wire.toggleSelectAll();
 			} else if (event.key === '/' && !event.ctrlKey && !event.metaKey) {
-				const searchInput = this.$el.querySelector('input[type=\"search\"], input[placeholder*=\"Search\"], input[wire\\:model*=\"search\"]');
+				const searchInput = Array.from(this.$el.querySelectorAll('input')).find((input) => {
+					return input.type === 'search'
+						|| input.placeholder.includes('Search')
+						|| Array.from(input.attributes).some((attribute) => attribute.name.includes('wire:model') && attribute.value.includes('search'));
+				});
+
 				if (searchInput) {
 					event.preventDefault();
 					searchInput.focus();
@@ -171,4 +176,3 @@
 		</x-slot>
 	</x-filament::modal>
 </div>
-
