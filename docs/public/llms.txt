@@ -1,0 +1,25 @@
+# Filament Sanchaya
+
+> Filament Sanchaya is a Filament v5 file manager and media picker for Laravel applications, with upload modals, media selection, file attachments, metadata, storage disk support, soft deletes, trash recovery, and configurable actions.
+
+Filament Sanchaya is published as the Composer package `dp0/filament-sanchaya`. The canonical documentation site is `https://filament-sanchaya.dineshphuyel.com.np/`, and the latest documented release is v1.0.2.
+
+## Documentation
+
+- [Filament Sanchaya homepage](https://filament-sanchaya.dineshphuyel.com.np/): Product overview, release video, current documentation link, and changelog.
+- [v1.0.2 documentation](https://filament-sanchaya.dineshphuyel.com.np/v1.0.2/): Installation, configuration, plugin registration, authorization, file manager, media picker, trash, attachments, actions, extensibility, testing, and troubleshooting.
+
+## Source
+
+- [GitHub repository](https://github.com/dp-0/filament-sanchaya): Source code, issues, releases, and contribution history.
+- [Composer package](https://packagist.org/packages/dp0/filament-sanchaya): Composer package metadata and install command.
+
+## Release Information
+
+- [Latest documentation version](https://filament-sanchaya.dineshphuyel.com.np/v1.0.2/): Current public documentation for v1.0.2.
+- [Sitemap](https://filament-sanchaya.dineshphuyel.com.np/sitemap.xml): XML sitemap for search engines.
+
+## Media
+
+- [Plugin preview video](https://filament-sanchaya.dineshphuyel.com.np/assets/filament-sanchaya-video.mp4): Short visual overview of the media picker, upload modal, and file manager.
+- [Plugin preview thumbnail](https://filament-sanchaya.dineshphuyel.com.np/assets/filament-sanchaya-thumbnail.jpg): 16:9 thumbnail image for the plugin preview.
