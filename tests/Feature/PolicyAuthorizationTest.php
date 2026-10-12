@@ -2,7 +2,7 @@
 
 namespace DP0\Sanchaya\Tests\Feature;
 
-use App\Models\User;
+use DP0\Sanchaya\Tests\Fixtures\User;
 use DP0\Sanchaya\Livewire\FileManager;
 use DP0\Sanchaya\Models\SanchayaFile;
 use DP0\Sanchaya\Tests\TestCase;
@@ -16,7 +16,11 @@ class PolicyAuthorizationTest extends TestCase
 {
     protected function createUser(): User
     {
-        return User::factory()->create();
+        return User::create([
+            'name' => 'Test User',
+            'email' => uniqid('test-', true).'@example.com',
+            'password' => 'secret',
+        ]);
     }
 
     public function test_it_authorizes_operations_with_default_policy(): void

@@ -1,0 +1,32 @@
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  php:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: shivammathur/setup-php@f3e473d116dcccaddc5834248c87452386958240 # v2.37.2
+        with:
+          php-version: '8.4'
+          extensions: sqlite3, pdo_sqlite, zip, intl, mbstring
+          tools: composer:v2
+          coverage: none
+      - name: Create clean Laravel test application
+        run: composer create-project laravel/laravel harness '^13.0' --no-interaction --prefer-dist
+      - name: Install package in test application
+        working-directory: harness
+        run: |
+          composer config repositories.sanchaya path ..
+          composer require 'dp0/filament-sanchaya:@dev' --no-interaction --with-all-dependencies
+      - name: Run package tests
+        env:
+          SANCHAYA_TEST_APP: ${{ github.workspace }}/harness
+        run: harness/vendor/bin/phpunit --configuration phpunit.xml

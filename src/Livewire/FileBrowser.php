@@ -6,23 +6,30 @@ use DP0\Sanchaya\Actions\CopyAction;
 use DP0\Sanchaya\Actions\CreateFolderAction;
 use DP0\Sanchaya\Actions\DeleteAction;
 use DP0\Sanchaya\Actions\DownloadAction;
+use DP0\Sanchaya\Actions\FinalizeChunkedUploadAction;
 use DP0\Sanchaya\Actions\MoveAction;
 use DP0\Sanchaya\Actions\RenameAction;
+use DP0\Sanchaya\Contracts\PathGenerator;
 use DP0\Sanchaya\Models\SanchayaFile;
 use DP0\Sanchaya\Traits\NormalizesNumericIds;
+use DP0\Sanchaya\Uploads\ChunkedUpload;
+use Filament\Facades\Filament;
 use Illuminate\Support\Facades\Gate;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Select;
 use Filament\Schemas\Concerns\InteractsWithSchemas;
 use Filament\Schemas\Contracts\HasSchemas;
 use Filament\Schemas\Schema;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Pagination\CursorPaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -35,12 +42,18 @@ abstract class FileBrowser extends Component implements HasSchemas
     use NormalizesNumericIds;
     use WithPagination;
 
+    #[Locked]
     public bool $multiple = false;
 
     /** @var array<int, string> */
+    #[Locked]
     public array $allowedTypes = [];
 
+    #[Locked]
     public ?string $pickerId = null;
+
+    #[Locked]
+    public ?string $directory = null;
 
     #[Url(as: 'sanchaya-disk', history: true)]
     public string $disk;
@@ -116,9 +129,17 @@ abstract class FileBrowser extends Component implements HasSchemas
     public array $uploadData = [];
 
     /** @var array<int, string> */
+    #[Locked]
     public array $uploadAcceptedFileTypes = [];
 
+    #[Locked]
     public ?int $uploadMaxFileSize = null;
+
+    #[Locked]
+    public ?int $chunkedUploadMaxFileSize = null;
+
+    #[Locked]
+    public bool $chunked = false;
 
     public function mount(
         bool $multiple = false,
@@ -127,8 +148,11 @@ abstract class FileBrowser extends Component implements HasSchemas
         ?string $pickerId = null,
         array $uploadAcceptedFileTypes = [],
         ?int $uploadMaxFileSize = null,
+        ?int $chunkedUploadMaxFileSize = null,
+        ?bool $chunked = null,
         ?string $disk = null,
         string $viewMode = 'grid',
+        ?string $directory = null,
     ): void {
         $this->multiple = $multiple;
         $this->allowedTypes = is_array($allowedTypes) ? $allowedTypes : [];
@@ -136,10 +160,15 @@ abstract class FileBrowser extends Component implements HasSchemas
         $this->pickerId = filled($pickerId) ? $pickerId : null;
         $this->uploadAcceptedFileTypes = $this->normalizeUploadAcceptedTypes($uploadAcceptedFileTypes);
         $this->uploadMaxFileSize = ($uploadMaxFileSize !== null && $uploadMaxFileSize > 0) ? $uploadMaxFileSize : null;
+        $this->chunkedUploadMaxFileSize = ($chunkedUploadMaxFileSize !== null && $chunkedUploadMaxFileSize > 0) ? $chunkedUploadMaxFileSize : null;
+        $this->chunked = $chunked ?? (bool) config('filament-sanchaya.file.chunked', false);
+        $this->directory = $this->pathGenerator()->normalizeDirectory($directory);
 
         if (! isset($this->disk) || $this->disk === '') {
             $this->disk = $disk ?? config('filament-sanchaya.default_disk', 'public');
         }
+
+        $this->selectedIds = $this->filterSelectedIdsToScope($this->selectedIds);
 
         if ($this->viewMode === '') {
             $this->viewMode = $viewMode;
@@ -185,6 +214,23 @@ abstract class FileBrowser extends Component implements HasSchemas
             ]);
     }
 
+    public function chunkUploadDiskSchema(Schema $schema): Schema
+    {
+        $diskOptions = $this->availableDisks;
+
+        return $schema
+            ->statePath('uploadData')
+            ->components([
+                Select::make('disk')
+                    ->label('Upload to disk')
+                    ->options(collect($diskOptions)->mapWithKeys(fn (string $disk) => [$disk => Str::upper($disk)])->all())
+                    ->default($this->defaultUploadDisk())
+                    ->searchable()
+                    ->hidden(count($diskOptions) <= 1)
+                    ->required(),
+            ]);
+    }
+
     #[Computed]
     public function availableDisks(): array
     {
@@ -208,7 +254,7 @@ abstract class FileBrowser extends Component implements HasSchemas
         $fileModel = $this->fileModel();
         $current = $fileModel::find($this->currentFolderId);
 
-        if (! $current) {
+        if (! $current || ! $this->itemIsInScope($current)) {
             return collect();
         }
 
@@ -235,9 +281,12 @@ abstract class FileBrowser extends Component implements HasSchemas
             return 0;
         }
 
-        return $this->fileModel()::onlyTrashed()
-            ->onDisk($this->disk)
-            ->count();
+        $query = $this->fileModel()::onlyTrashed()
+            ->onDisk($this->disk);
+
+        $this->applyDirectoryScope($query);
+
+        return $query->count();
     }
 
     #[Computed]
@@ -247,7 +296,9 @@ abstract class FileBrowser extends Component implements HasSchemas
             return null;
         }
 
-        return $this->fileModel()::find($this->currentFolderId);
+        $folder = $this->fileModel()::find($this->currentFolderId);
+
+        return $folder && $this->itemIsInScope($folder) ? $folder : null;
     }
 
     #[Computed]
@@ -258,6 +309,8 @@ abstract class FileBrowser extends Component implements HasSchemas
         $query = $this->isTrash
             ? $fileModel::onlyTrashed()->onDisk($this->disk)
             : $fileModel::query()->onDisk($this->disk)->inFolder($this->currentFolderId);
+
+        $this->applyDirectoryScope($query);
 
         if ($this->search !== '') {
             $query->where(function ($q) {
@@ -319,7 +372,9 @@ abstract class FileBrowser extends Component implements HasSchemas
             return null;
         }
 
-        return $this->fileModel()::find($this->previewFileId);
+        $file = $this->fileModel()::find($this->previewFileId);
+
+        return $file && $this->itemIsInScope($file) ? $file : null;
     }
 
     #[Computed]
@@ -332,6 +387,10 @@ abstract class FileBrowser extends Component implements HasSchemas
             ->orderBy('original_name')
             ->get()
             ->keyBy('id');
+
+        if ($this->directory !== null) {
+            $all = $all->filter(fn (SanchayaFile $folder): bool => $this->pathGenerator()->isWithin($folder->path, $this->directory))->keyBy('id');
+        }
 
         foreach ($all as $folder) {
             $folder->setRelation('children', collect());
@@ -361,6 +420,11 @@ abstract class FileBrowser extends Component implements HasSchemas
 
     public function navigateTo(?int $folderId): void
     {
+        if ($folderId !== null) {
+            $folder = $this->fileModel()::findOrFail($folderId);
+            abort_unless($folder->is_folder && $this->itemIsInScope($folder), 404);
+        }
+
         $this->isTrash = false;
         $this->currentFolderId = $folderId !== null ? (int) $folderId : null;
         $this->checkedIds = [];
@@ -377,6 +441,8 @@ abstract class FileBrowser extends Component implements HasSchemas
 
     public function switchDisk(string $disk): void
     {
+        abort_unless(in_array($disk, $this->availableDisks, true), 404);
+
         $this->disk = $disk;
         $this->isTrash = false;
         $this->currentFolderId = null;
@@ -390,6 +456,8 @@ abstract class FileBrowser extends Component implements HasSchemas
     public function toggleFolderExpanded(int $folderId): void
     {
         $folderId = (int) $folderId;
+        $folder = $this->fileModel()::findOrFail($folderId);
+        abort_unless($folder->is_folder && $this->itemIsInScope($folder), 404);
 
         if (in_array($folderId, $this->expandedFolderIds, true)) {
             $this->expandedFolderIds = array_values(array_filter(
@@ -490,6 +558,7 @@ abstract class FileBrowser extends Component implements HasSchemas
     public function toggleCheck(int $id): void
     {
         $id = (int) $id;
+        $this->assertItemInScope($this->fileModel()::findOrFail($id));
 
         if (in_array($id, $this->checkedIds, true)) {
             $this->checkedIds = array_values(array_filter($this->checkedIds, fn ($i) => $i !== $id));
@@ -546,16 +615,18 @@ abstract class FileBrowser extends Component implements HasSchemas
             return;
         }
 
-        $this->previewFileId = $fileId;
         $file = $this->fileModel()::find($fileId);
-
-        if ($file) {
-            $metadata = is_array($file->metadata) ? $file->metadata : [];
-            $this->metaAltText = (string) ($metadata['alt_text'] ?? '');
-            $this->metaTitle = (string) ($metadata['title'] ?? '');
-            $this->metaCaption = (string) ($metadata['caption'] ?? '');
-            $this->metaDescription = (string) ($metadata['description'] ?? '');
+        if (! $file) {
+            return;
         }
+        $this->assertItemInScope($file);
+        $this->previewFileId = $fileId;
+
+        $metadata = is_array($file->metadata) ? $file->metadata : [];
+        $this->metaAltText = (string) ($metadata['alt_text'] ?? '');
+        $this->metaTitle = (string) ($metadata['title'] ?? '');
+        $this->metaCaption = (string) ($metadata['caption'] ?? '');
+        $this->metaDescription = (string) ($metadata['description'] ?? '');
 
         $this->showDetailPanel = true;
         $this->dispatch('open-modal', id: 'sanchaya-detail');
@@ -578,6 +649,7 @@ abstract class FileBrowser extends Component implements HasSchemas
         }
 
         $file = $this->fileModel()::findOrFail($this->previewFileId);
+        $this->assertItemInScope($file);
         Gate::authorize('update', $file);
 
         $this->validate([
@@ -637,6 +709,12 @@ abstract class FileBrowser extends Component implements HasSchemas
         $maxFileSizeKb = $this->resolvedUploadMaxFileSize();
         $uploadDisk = $this->resolvedUploadDisk();
         $files = $this->normalizePendingUploads();
+
+        if (collect($files)->contains(fn ($file): bool => ! $file instanceof UploadedFile)) {
+            $this->addError('uploadData.files', 'The file is still uploading. Please wait until the upload reaches 100% and try again.');
+
+            return;
+        }
 
         if ($this->allowsMultipleUpload()) {
             // Ensure Laravel validation reads normalized TemporaryUploadedFile instances.
@@ -725,6 +803,69 @@ abstract class FileBrowser extends Component implements HasSchemas
         $this->notify('error', 'No files were uploaded.');
     }
 
+    public function completeChunkUpload(string $id, ChunkedUpload $uploads, bool $closeModal = true): void
+    {
+        abort_unless($this->chunked, 403);
+
+        if ($panel = Filament::getCurrentPanel()) {
+            auth()->shouldUse($panel->getAuthGuard());
+        }
+
+        Gate::authorize('create', $this->fileModel());
+
+        $disk = data_get($this->uploadData, 'disk');
+
+        if (! is_string($disk) || ! in_array($disk, $this->availableDisks, true)) {
+            throw ValidationException::withMessages(['upload' => 'Please choose a valid upload disk.']);
+        }
+
+        $upload = $uploads->completed($id);
+
+        $parentId = $this->currentFolderId;
+        $this->assertCurrentFolderInScope($disk);
+
+        app(config('filament-sanchaya.file.finalizer', FinalizeChunkedUploadAction::class))->execute(
+            $upload,
+            $disk,
+            $parentId,
+            $this->directory,
+            $this->resolvedUploadAcceptedTypes(),
+            $this->resolvedChunkedUploadMaxFileSize(),
+        );
+
+        $uploads->discard($id);
+        if ($closeModal) {
+            $this->onUploadComplete();
+        } else {
+            $this->unsetComputed();
+        }
+        $this->notify('success', 'File uploaded successfully.');
+    }
+
+    /** @return array{ok: bool, message?: string} */
+    public function finishChunkUpload(string $id, bool $closeModal = true): array
+    {
+        try {
+            $this->completeChunkUpload($id, app(ChunkedUpload::class), $closeModal);
+
+            return ['ok' => true];
+        } catch (ValidationException $exception) {
+            return [
+                'ok' => false,
+                'message' => collect($exception->errors())->flatten()->first() ?: 'Upload failed.',
+            ];
+        }
+    }
+
+    public function cancelChunkUpload(string $id, ChunkedUpload $uploads): void
+    {
+        if ($panel = Filament::getCurrentPanel()) {
+            auth()->shouldUse($panel->getAuthGuard());
+        }
+
+        $uploads->discard($id);
+    }
+
     #[On('sanchaya:create-folder')]
     public function onCreateFolderEvent(string $name): void
     {
@@ -747,12 +888,14 @@ abstract class FileBrowser extends Component implements HasSchemas
         }
 
         $this->validate(['newFolderName' => 'required|string|max:255']);
+        $this->assertCurrentFolderInScope($this->disk);
 
         try {
             app($this->actionClass('create_folder', CreateFolderAction::class))->execute(
                 $this->newFolderName,
                 $this->disk,
                 $this->currentFolderId,
+                $this->directory,
             );
 
             $this->newFolderName = '';
@@ -771,6 +914,7 @@ abstract class FileBrowser extends Component implements HasSchemas
         }
 
         $item = $this->fileModel()::findOrFail($id);
+        $this->assertItemInScope($item);
         Gate::authorize('update', $item);
 
         $this->renamingId = $id;
@@ -790,6 +934,7 @@ abstract class FileBrowser extends Component implements HasSchemas
         $this->validate(['renameValue' => 'required|string|max:255']);
 
         $item = $this->fileModel()::findOrFail($this->renamingId);
+        $this->assertItemInScope($item);
         Gate::authorize('update', $item);
 
         try {
@@ -810,6 +955,7 @@ abstract class FileBrowser extends Component implements HasSchemas
             return;
         }
 
+        $this->assertItemInScope($this->fileModel()::findOrFail($id));
         $this->movingId = $id;
         $this->bulkDestinationAction = null;
         $this->moveDestinationId = null;
@@ -877,10 +1023,11 @@ abstract class FileBrowser extends Component implements HasSchemas
         }
 
         $item = $this->fileModel()::findOrFail($this->movingId);
+        $this->assertItemInScope($item);
         Gate::authorize('update', $item);
 
         try {
-            app($this->actionClass('move', MoveAction::class))->execute($item, $this->moveDestinationId);
+            app($this->actionClass('move', MoveAction::class))->execute($item, $this->moveDestinationId, null, $this->directory);
 
             $this->movingId = null;
             $this->bulkDestinationAction = null;
@@ -905,6 +1052,7 @@ abstract class FileBrowser extends Component implements HasSchemas
         }
 
         $items = $this->fileModel()::whereIn('id', $this->checkedIds)->get();
+        $items->each(fn (SanchayaFile $item) => $this->assertItemInScope($item));
         $action = app($this->actionClass('move', MoveAction::class));
         $successCount = 0;
         $errors = [];
@@ -912,7 +1060,7 @@ abstract class FileBrowser extends Component implements HasSchemas
         foreach ($items as $item) {
             try {
                 Gate::authorize('update', $item);
-                $action->execute($item, $this->moveDestinationId, $this->disk);
+                $action->execute($item, $this->moveDestinationId, $this->disk, $this->directory);
                 $successCount++;
             } catch (ValidationException $e) {
                 $errors[] = $item->display_name.': '.collect($e->errors())->flatten()->first();
@@ -945,10 +1093,12 @@ abstract class FileBrowser extends Component implements HasSchemas
         }
 
         $item = $this->fileModel()::findOrFail($id);
+        $this->assertItemInScope($item);
+        $this->assertCurrentFolderInScope($this->disk);
         Gate::authorize('update', $item);
 
         try {
-            app($this->actionClass('copy', CopyAction::class))->execute($item, $this->currentFolderId, $this->disk);
+            app($this->actionClass('copy', CopyAction::class))->execute($item, $this->currentFolderId, $this->disk, $this->directory);
             $this->unsetComputed();
             $this->notify('success', 'Copied successfully.');
         } catch (ValidationException $e) {
@@ -969,6 +1119,7 @@ abstract class FileBrowser extends Component implements HasSchemas
         }
 
         $items = $this->fileModel()::whereIn('id', $this->checkedIds)->get();
+        $items->each(fn (SanchayaFile $item) => $this->assertItemInScope($item));
         $action = app($this->actionClass('copy', CopyAction::class));
         $successCount = 0;
         $errors = [];
@@ -976,7 +1127,7 @@ abstract class FileBrowser extends Component implements HasSchemas
         foreach ($items as $item) {
             try {
                 Gate::authorize('update', $item);
-                $action->execute($item, $this->moveDestinationId, $this->disk);
+                $action->execute($item, $this->moveDestinationId, $this->disk, $this->directory);
                 $successCount++;
             } catch (ValidationException $e) {
                 $errors[] = $item->display_name.': '.collect($e->errors())->flatten()->first();
@@ -1006,6 +1157,9 @@ abstract class FileBrowser extends Component implements HasSchemas
             return;
         }
 
+        if ($id !== null) {
+            $this->assertItemInScope($this->fileModel()::findOrFail($id));
+        }
         $this->deletingId = $id;
         $this->dispatch('open-modal', id: 'sanchaya-delete');
     }
@@ -1022,10 +1176,12 @@ abstract class FileBrowser extends Component implements HasSchemas
 
         if ($this->deletingId !== null) {
             $item = $this->fileModel()::findOrFail($this->deletingId);
+            $this->assertItemInScope($item);
             Gate::authorize('delete', $item);
             $action->execute($item);
         } else {
             $items = $this->fileModel()::whereIn('id', $this->checkedIds)->get();
+            $items->each(fn (SanchayaFile $item) => $this->assertItemInScope($item));
             foreach ($items as $item) {
                 Gate::authorize('delete', $item);
             }
@@ -1042,6 +1198,7 @@ abstract class FileBrowser extends Component implements HasSchemas
     public function restoreItem(int $id): void
     {
         $item = $this->fileModel()::onlyTrashed()->findOrFail($id);
+        $this->assertItemInScope($item);
         Gate::authorize('delete', $item);
 
         app($this->actionClass('delete', DeleteAction::class))->restore($item);
@@ -1056,6 +1213,7 @@ abstract class FileBrowser extends Component implements HasSchemas
         }
 
         $items = $this->fileModel()::onlyTrashed()->whereIn('id', $this->checkedIds)->get();
+        $items->each(fn (SanchayaFile $item) => $this->assertItemInScope($item));
         $action = app($this->actionClass('delete', DeleteAction::class));
 
         foreach ($items as $item) {
@@ -1072,6 +1230,7 @@ abstract class FileBrowser extends Component implements HasSchemas
     public function forceDeleteItem(int $id): void
     {
         $item = $this->fileModel()::onlyTrashed()->findOrFail($id);
+        $this->assertItemInScope($item);
         Gate::authorize('delete', $item);
 
         app($this->actionClass('delete', DeleteAction::class))->forceDeleteTrashed($item);
@@ -1086,6 +1245,7 @@ abstract class FileBrowser extends Component implements HasSchemas
         }
 
         $items = $this->fileModel()::onlyTrashed()->whereIn('id', $this->checkedIds)->get();
+        $items->each(fn (SanchayaFile $item) => $this->assertItemInScope($item));
         $action = app($this->actionClass('delete', DeleteAction::class));
 
         foreach ($items as $item) {
@@ -1101,7 +1261,9 @@ abstract class FileBrowser extends Component implements HasSchemas
 
     public function emptyTrash(): void
     {
-        $items = $this->fileModel()::onlyTrashed()->onDisk($this->disk)->get();
+        $query = $this->fileModel()::onlyTrashed()->onDisk($this->disk);
+        $this->applyDirectoryScope($query);
+        $items = $query->get();
         $action = app($this->actionClass('delete', DeleteAction::class));
 
         foreach ($items as $item) {
@@ -1124,6 +1286,7 @@ abstract class FileBrowser extends Component implements HasSchemas
         }
 
         $item = $this->fileModel()::findOrFail($id);
+        $this->assertItemInScope($item);
         Gate::authorize('download', $item);
 
         return app($this->actionClass('download', DownloadAction::class))->execute($item);
@@ -1138,6 +1301,7 @@ abstract class FileBrowser extends Component implements HasSchemas
         }
 
         $items = $this->fileModel()::whereIn('id', $this->checkedIds)->get();
+        $items->each(fn (SanchayaFile $item) => $this->assertItemInScope($item));
         foreach ($items as $item) {
             Gate::authorize('download', $item);
         }
@@ -1155,6 +1319,7 @@ abstract class FileBrowser extends Component implements HasSchemas
 
     protected function storeUploadedFile(TemporaryUploadedFile $uploaded, string $disk): void
     {
+        $this->assertCurrentFolderInScope($disk);
         $originalName = $uploaded->getClientOriginalName();
         $extension = $uploaded->getClientOriginalExtension();
         $mimeType = $uploaded->getMimeType();
@@ -1199,12 +1364,81 @@ abstract class FileBrowser extends Component implements HasSchemas
             $fileModel = $this->fileModel();
             $parent = $fileModel::find($parentId);
 
-            if ($parent && $parent->is_folder) {
+            if ($parent && $parent->is_folder && $parent->disk === $disk && $this->isPathInDirectory($parent->path)) {
                 return $parent->path;
             }
         }
 
-        return 'sanchaya/'.now()->format('Y/m');
+        return $this->pathGenerator()->rootPath($this->directory);
+    }
+
+    protected function pathGenerator(): PathGenerator
+    {
+        return app(PathGenerator::class);
+    }
+
+    protected function isPathInDirectory(string $path): bool
+    {
+        return $this->directory === null
+            ? true
+            : $this->pathGenerator()->isWithin($path, $this->directory);
+    }
+
+    protected function itemIsInScope(SanchayaFile $item): bool
+    {
+        return $item->disk === $this->disk && $this->isPathInDirectory($item->path);
+    }
+
+    protected function assertItemInScope(SanchayaFile $item): void
+    {
+        abort_unless($this->itemIsInScope($item), 404);
+    }
+
+    protected function assertCurrentFolderInScope(string $disk): void
+    {
+        if ($this->currentFolderId === null) {
+            return;
+        }
+
+        $folder = $this->fileModel()::findOrFail($this->currentFolderId);
+        abort_unless($folder->is_folder && $folder->disk === $disk && $this->isPathInDirectory($folder->path), 404);
+    }
+
+    protected function applyDirectoryScope($query): void
+    {
+        if ($this->directory === null) {
+            return;
+        }
+
+        $prefix = rtrim($this->pathGenerator()->basePath($this->directory), '/');
+
+        $escapedPrefix = str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $prefix);
+
+        $query->where(function ($nested) use ($prefix, $escapedPrefix): void {
+            $nested->where('path', $prefix)->orWhereRaw("path LIKE ? ESCAPE '!'", [$escapedPrefix.'/%']);
+        });
+    }
+
+    /**
+     * @param  array<int, int>  $ids
+     * @return array<int, int>
+     */
+    protected function filterSelectedIdsToScope(array $ids): array
+    {
+        if ($ids === []) {
+            return [];
+        }
+
+        $files = $this->fileModel()::query()
+            ->whereIn('id', $ids)
+            ->where('disk', $this->disk)
+            ->where('type', 'file')
+            ->get();
+
+        return collect($ids)
+            ->filter(fn (int $id): bool => $files->contains(fn ($file): bool => (int) $file->getKey() === $id && $this->isPathInDirectory($file->path)))
+            ->values()
+            ->all();
     }
 
     /**
@@ -1257,6 +1491,11 @@ abstract class FileBrowser extends Component implements HasSchemas
     protected function resolvedUploadMaxFileSize(): int
     {
         return $this->uploadMaxFileSize ?: (int) config('filament-sanchaya.file.max_file_size', 10240);
+    }
+
+    protected function resolvedChunkedUploadMaxFileSize(): int
+    {
+        return $this->chunkedUploadMaxFileSize ?: (int) config('filament-sanchaya.file.max_chunked_file_size', 102400);
     }
 
     protected function defaultUploadDisk(): string
@@ -1448,13 +1687,13 @@ abstract class FileBrowser extends Component implements HasSchemas
         if ($this->isTrash) {
             $this->currentFolderId = null;
         } elseif ($this->currentFolderId !== null) {
-            $exists = $this->fileModel()::query()
+            $folder = $this->fileModel()::query()
                 ->onDisk($this->disk)
                 ->folders()
                 ->whereKey($this->currentFolderId)
-                ->exists();
+                ->first();
 
-            if (! $exists) {
+            if (! $folder || ! $this->isPathInDirectory($folder->path)) {
                 $this->currentFolderId = null;
             }
         }

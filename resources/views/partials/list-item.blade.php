@@ -58,13 +58,13 @@
             @if ($item->is_image && $item->preview_url)
                 <img src="{{ $item->preview_url }}" alt="{{ $item->display_name }}" class="w-8 h-8 rounded object-cover flex-shrink-0" loading="lazy" />
             @elseif ($isFolder)
-                <x-heroicon-o-folder class="w-6 h-6 text-yellow-400 flex-shrink-0" />
+                <x-filament::icon icon="heroicon-o-folder" class="w-6 h-6 text-yellow-400 flex-shrink-0"  />
             @elseif ($item->is_video)
-                <x-heroicon-o-film class="w-6 h-6 text-purple-400 flex-shrink-0" />
+                <x-filament::icon icon="heroicon-o-film" class="w-6 h-6 text-purple-400 flex-shrink-0"  />
             @elseif ($item->is_audio)
-                <x-heroicon-o-musical-note class="w-6 h-6 text-blue-400 flex-shrink-0" />
+                <x-filament::icon icon="heroicon-o-musical-note" class="w-6 h-6 text-blue-400 flex-shrink-0"  />
             @else
-                <x-heroicon-o-document class="w-6 h-6 text-gray-400 flex-shrink-0" />
+                <x-filament::icon icon="heroicon-o-document" class="w-6 h-6 text-gray-400 flex-shrink-0"  />
             @endif
 
             <span class="text-sm font-medium text-gray-800 dark:text-gray-200 truncate max-w-xs" title="{{ $item->display_name }}">
@@ -95,7 +95,7 @@
                 <x-filament::dropdown placement="bottom-end" x-on:click.stop>
                     <x-slot name="trigger">
                         <button type="button" class="inline-flex items-center justify-center w-7 h-7 rounded text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <x-heroicon-m-ellipsis-horizontal class="w-4 h-4" />
+                            <x-filament::icon icon="heroicon-m-ellipsis-horizontal" class="w-4 h-4"  />
                         </button>
                     </x-slot>
                     <x-filament::dropdown.list>

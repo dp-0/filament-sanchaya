@@ -69,7 +69,7 @@
 	@if ($isTrash)
 		<div class="flex items-center justify-between px-4 py-2.5 bg-danger-50 dark:bg-danger-950/40 border-b border-danger-200 dark:border-danger-800 text-xs text-danger-800 dark:text-danger-200">
 			<div class="flex items-center gap-2">
-				<x-heroicon-s-trash class="w-4 h-4 text-danger-600 dark:text-danger-400" />
+				<x-filament::icon icon="heroicon-s-trash" class="w-4 h-4 text-danger-600 dark:text-danger-400"  />
 				<span class="font-semibold">Trash Bin:</span>
 				<span>Showing soft-deleted files and folders on {{ Str::upper($disk) }}.</span>
 			</div>
@@ -184,7 +184,7 @@
 				class="ml-auto p-1 rounded text-gray-400 hover:text-gray-600
 					   dark:hover:text-gray-200 transition-colors"
 			>
-				<x-heroicon-m-x-mark class="w-4 h-4" />
+				<x-filament::icon icon="heroicon-m-x-mark" class="w-4 h-4"  />
 			</button>
 		</div>
 	@endif
@@ -197,10 +197,10 @@
 				<div class="flex flex-col items-center justify-center flex-1
 							text-gray-400 dark:text-gray-500">
 					@if ($isTrash)
-						<x-heroicon-o-trash class="w-16 h-16 mb-3 opacity-40 text-danger-400" />
+						<x-filament::icon icon="heroicon-o-trash" class="w-16 h-16 mb-3 opacity-40 text-danger-400"  />
 						<p class="text-sm font-medium">Trash is empty.</p>
 					@else
-						<x-heroicon-o-folder-open class="w-16 h-16 mb-3 opacity-40" />
+						<x-filament::icon icon="heroicon-o-folder-open" class="w-16 h-16 mb-3 opacity-40"  />
 						<p class="text-sm font-medium">
 							@if ($search !== '' || $mimeFilter !== '')
 								No files match your filters.
@@ -256,7 +256,7 @@
 								>
 									Name
 									@if ($sortBy === 'name')
-										<x-heroicon-m-chevron-up-down class="w-3 h-3" />
+										<x-filament::icon icon="heroicon-m-chevron-up-down" class="w-3 h-3"  />
 									@endif
 								</button>
 							</th>
@@ -270,7 +270,7 @@
 								>
 									Size
 									@if ($sortBy === 'size')
-										<x-heroicon-m-chevron-up-down class="w-3 h-3" />
+										<x-filament::icon icon="heroicon-m-chevron-up-down" class="w-3 h-3"  />
 									@endif
 								</button>
 							</th>
@@ -285,7 +285,7 @@
 								>
 									Date
 									@if ($sortBy === 'date')
-										<x-heroicon-m-chevron-up-down class="w-3 h-3" />
+										<x-filament::icon icon="heroicon-m-chevron-up-down" class="w-3 h-3"  />
 									@endif
 								</button>
 							</th>
@@ -382,7 +382,7 @@
 					'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800' => $moveDestinationId !== null,
 				])
 			>
-				<x-heroicon-o-home class="w-4 h-4 shrink-0" />
+				<x-filament::icon icon="heroicon-o-home" class="w-4 h-4 shrink-0"  />
 				Root
 			</button>
 

@@ -3,6 +3,7 @@
 namespace DP0\Sanchaya\Actions;
 
 use DP0\Sanchaya\Models\SanchayaFile;
+use DP0\Sanchaya\Contracts\PathGenerator;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -20,28 +21,30 @@ class CopyAction
      *
      * @throws ValidationException
      */
-    public function execute(SanchayaFile $item, ?int $destinationId, ?string $destinationDisk = null): SanchayaFile
+    public function execute(SanchayaFile $item, ?int $destinationId, ?string $destinationDisk = null, ?string $directory = null): SanchayaFile
     {
         $targetDisk = $destinationDisk ?? $item->disk;
 
-        $this->validate($item, $destinationId, $targetDisk);
+        $this->validate($item, $destinationId, $targetDisk, $directory);
 
         $destination = $destinationId
             ? $this->resolveDestination($destinationId)
             : null;
 
         if ($item->is_file) {
-            return $this->copyFile($item, $destination, $targetDisk);
+            return $this->copyFile($item, $destination, $targetDisk, $directory);
         }
 
-        return $this->copyFolder($item, $destination, $targetDisk);
+        return $this->copyFolder($item, $destination, $targetDisk, $directory);
     }
 
-    protected function copyFile(SanchayaFile $file, ?SanchayaFile $destination, string $targetDisk): SanchayaFile
+    protected function copyFile(SanchayaFile $file, ?SanchayaFile $destination, string $targetDisk, ?string $directory = null): SanchayaFile
     {
         $newFileName = Str::uuid().($file->extension ? '.'.$file->extension : '');
-        $basePath = $destination ? rtrim($destination->path, '/') : 'sanchaya/'.now()->format('Y/m');
-        $newPath = $basePath.'/'.$newFileName;
+        $generator = app(PathGenerator::class);
+        $newPath = $destination
+            ? $generator->childPath($destination->path, $newFileName)
+            : $generator->childPath($generator->rootPath($directory), $newFileName);
 
         // Copy bytes on disk
         $contents = Storage::disk($file->disk)->get($file->path);
@@ -73,11 +76,15 @@ class CopyAction
         }
     }
 
-    protected function copyFolder(SanchayaFile $folder, ?SanchayaFile $destination, string $targetDisk): SanchayaFile
+    protected function copyFolder(SanchayaFile $folder, ?SanchayaFile $destination, string $targetDisk, ?string $directory = null): SanchayaFile
     {
         $newSlug = Str::slug($folder->original_name, '-');
-        $basePath = $destination ? rtrim($destination->path, '/') : '';
-        $newPath = $basePath ? $basePath.'/'.$newSlug : $newSlug;
+        $generator = app(PathGenerator::class);
+        $newPath = $destination
+            ? $generator->childPath($destination->path, $newSlug)
+            : (($root = $generator->folderRootPath($directory)) === ''
+                ? $newSlug
+                : $generator->childPath($root, $newSlug));
 
         /** @var SanchayaFile $fileModel */
         $fileModel = config('filament-sanchaya.model', SanchayaFile::class);
@@ -96,9 +103,9 @@ class CopyAction
 
         foreach ($folder->children()->get() as $child) {
             if ($child->is_file) {
-                $this->copyFile($child, $newFolder, $targetDisk);
+                $this->copyFile($child, $newFolder, $targetDisk, $directory);
             } else {
-                $this->copyFolder($child, $newFolder, $targetDisk);
+                $this->copyFolder($child, $newFolder, $targetDisk, $directory);
             }
         }
 
@@ -139,8 +146,21 @@ class CopyAction
         return $candidate;
     }
 
-    protected function validate(SanchayaFile $item, ?int $destinationId, string $targetDisk): void
+    protected function validate(SanchayaFile $item, ?int $destinationId, string $targetDisk, ?string $directory = null): void
     {
+        $generator = app(PathGenerator::class);
+
+        if ($directory !== null && ! $generator->isWithin($item->path, $directory)) {
+            throw ValidationException::withMessages(['destination' => 'The item is outside the selected directory.']);
+        }
+
+        if ($directory !== null && $destinationId !== null) {
+            $destination = $this->resolveDestination($destinationId);
+
+            if (! $destination->is_folder || $destination->disk !== $targetDisk || ! $generator->isWithin($destination->path, $directory)) {
+                throw ValidationException::withMessages(['destination' => 'The destination is outside the selected directory.']);
+            }
+        }
         // Cannot copy a folder into itself or its own descendants
         if ($item->is_folder) {
             if ($destinationId === $item->id) {

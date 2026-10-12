@@ -3,6 +3,7 @@
 namespace DP0\Sanchaya;
 
 use DP0\Sanchaya\Commands\InstallCommand;
+use DP0\Sanchaya\Contracts\PathGenerator;
 use DP0\Sanchaya\Livewire\FileManager;
 use DP0\Sanchaya\Livewire\FilePicker;
 use DP0\Sanchaya\Models\SanchayaAttachment;
@@ -20,11 +21,18 @@ class SanchayaServiceProvider extends ServiceProvider
             __DIR__.'/../config/filament-sanchaya.php',
             'filament-sanchaya'
         );
+
+        $this->app->singleton(PathGenerator::class, function ($app): PathGenerator {
+            $class = config('filament-sanchaya.storage.path_generator');
+
+            return $app->make($class);
+        });
     }
 
     public function boot(): void
     {
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'filament-sanchaya');
+        $this->loadRoutesFrom(__DIR__.'/../routes/web.php');
 
         $this->registerPolicy();
         $this->registerLivewireComponents();

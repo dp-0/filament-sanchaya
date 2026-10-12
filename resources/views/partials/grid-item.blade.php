@@ -50,7 +50,7 @@
     @elseif ($isSelected)
         <div class="absolute top-2 right-2 z-10">
             <span class="flex items-center justify-center w-5 h-5 rounded-full bg-primary-500 text-white">
-                <x-heroicon-m-check class="w-3 h-3" />
+                <x-filament::icon icon="heroicon-m-check" class="w-3 h-3"  />
             </span>
         </div>
     @endif
@@ -72,10 +72,10 @@
                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex'"
             />
             <div class="hidden w-full h-full items-center justify-center">
-                <x-heroicon-o-photo class="w-12 h-12 text-gray-400" />
+                <x-filament::icon icon="heroicon-o-photo" class="w-12 h-12 text-gray-400"  />
             </div>
         @elseif ($isFolder)
-            <x-heroicon-o-folder class="w-12 h-12 text-yellow-400" />
+            <x-filament::icon icon="heroicon-o-folder" class="w-12 h-12 text-yellow-400"  />
         @else
             @php
                 $icon = match(true) {
@@ -108,7 +108,7 @@
             <x-filament::dropdown>
                 <x-slot name="trigger">
                     <button type="button" class="flex items-center justify-center w-6 h-6 rounded-full bg-white dark:bg-gray-700 shadow text-gray-500 hover:text-gray-800 dark:hover:text-gray-200">
-                        <x-heroicon-m-ellipsis-vertical class="w-4 h-4" />
+                        <x-filament::icon icon="heroicon-m-ellipsis-vertical" class="w-4 h-4"  />
                     </button>
                 </x-slot>
                 <x-filament::dropdown.list>

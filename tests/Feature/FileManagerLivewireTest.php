@@ -2,12 +2,13 @@
 
 namespace DP0\Sanchaya\Tests\Feature;
 
-use App\Models\User;
+use DP0\Sanchaya\Tests\Fixtures\User;
 use DP0\Sanchaya\Livewire\FileManager;
 use DP0\Sanchaya\Livewire\FilePicker;
 use DP0\Sanchaya\Models\SanchayaFile;
 use DP0\Sanchaya\Tests\TestCase;
 use Livewire\Livewire;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 
 class FileManagerLivewireTest extends TestCase
 {
@@ -137,6 +138,110 @@ class FileManagerLivewireTest extends TestCase
             ->assertSet('selectedIds', [$file1->id, $file2->id])
             ->call('toggleSelectAll')
             ->assertSet('selectedIds', []);
+    }
+
+    public function test_file_picker_directory_only_shows_files_in_that_directory(): void
+    {
+        $inside = SanchayaFile::create([
+            'type' => 'file',
+            'disk' => 'public',
+            'path' => 'sanchaya/products/2026/10/inside.jpg',
+            'file_name' => 'inside.jpg',
+            'original_name' => 'Inside.jpg',
+        ]);
+
+        SanchayaFile::create([
+            'type' => 'file',
+            'disk' => 'public',
+            'path' => 'sanchaya/private/2026/10/hidden.jpg',
+            'file_name' => 'hidden.jpg',
+            'original_name' => 'Hidden.jpg',
+        ]);
+
+        Livewire::test(FilePicker::class, [
+            'pickerId' => 'products',
+            'directory' => 'products',
+        ])
+            ->assertSee('Inside.jpg')
+            ->assertDontSee('Hidden.jpg')
+            ->call('selectFile', $inside->id)
+            ->assertSet('selectedIds', [$inside->id]);
+    }
+
+    public function test_file_picker_filters_tampered_selected_ids_before_confirming(): void
+    {
+        $outside = SanchayaFile::create([
+            'type' => 'file', 'disk' => 'public', 'path' => 'sanchaya/private/hidden.jpg',
+            'file_name' => 'hidden.jpg', 'original_name' => 'Hidden.jpg',
+        ]);
+
+        Livewire::test(FilePicker::class, ['directory' => 'products', 'multiple' => true])
+            ->set('selectedIds', [$outside->id])
+            ->call('confirmSelection')
+            ->assertSet('selectedIds', []);
+    }
+
+    public function test_file_picker_directory_cannot_be_changed_by_the_client(): void
+    {
+        $this->expectException(CannotUpdateLockedPropertyException::class);
+
+        Livewire::test(FilePicker::class, ['directory' => 'products'])
+            ->set('directory', null);
+    }
+
+    public function test_directory_underscore_is_matched_literally(): void
+    {
+        SanchayaFile::create([
+            'type' => 'file', 'disk' => 'public', 'path' => 'sanchaya/product_1/inside.jpg',
+            'file_name' => 'inside.jpg', 'original_name' => 'Inside.jpg',
+        ]);
+        SanchayaFile::create([
+            'type' => 'file', 'disk' => 'public', 'path' => 'sanchaya/productX1/outside.jpg',
+            'file_name' => 'outside.jpg', 'original_name' => 'Outside.jpg',
+        ]);
+
+        Livewire::test(FilePicker::class, ['directory' => 'product_1'])
+            ->assertSee('Inside.jpg')
+            ->assertDontSee('Outside.jpg');
+    }
+
+    public function test_scoped_picker_cannot_create_folder_under_another_namespace(): void
+    {
+        $this->actingAs(User::create([
+            'name' => 'Admin', 'email' => 'scoped@example.com', 'password' => 'secret',
+        ]));
+
+        $outside = SanchayaFile::create([
+            'type' => 'folder', 'disk' => 'public', 'path' => 'sanchaya/private',
+            'file_name' => 'private', 'original_name' => 'Private',
+        ]);
+
+        Livewire::test(FilePicker::class, ['directory' => 'products'])
+            ->set('currentFolderId', $outside->id)
+            ->set('newFolderName', 'Escaped')
+            ->call('createFolder')
+            ->assertNotFound();
+
+        $this->assertDatabaseMissing('sanchaya_files', ['original_name' => 'Escaped']);
+    }
+
+    public function test_scoped_picker_cannot_delete_a_file_outside_its_directory(): void
+    {
+        $this->actingAs(User::create([
+            'name' => 'Admin', 'email' => 'scoped-delete@example.com', 'password' => 'secret',
+        ]));
+
+        $outside = SanchayaFile::create([
+            'type' => 'file', 'disk' => 'public', 'path' => 'sanchaya/private/hidden.jpg',
+            'file_name' => 'hidden.jpg', 'original_name' => 'Hidden.jpg',
+        ]);
+
+        Livewire::test(FilePicker::class, ['directory' => 'products'])
+            ->set('deletingId', $outside->id)
+            ->call('delete')
+            ->assertNotFound();
+
+        $this->assertDatabaseHas('sanchaya_files', ['id' => $outside->id, 'deleted_at' => null]);
     }
 
     public function test_file_manager_select_all_toggles_checked_items(): void

@@ -36,7 +36,7 @@
         <div class="p-3 border-t border-gray-200 dark:border-gray-700/60 shrink-0 text-xs">
             <div class="flex items-center justify-between text-gray-600 dark:text-gray-400 mb-1.5 font-medium">
                 <span class="flex items-center gap-1.5">
-                    <x-heroicon-o-circle-stack class="w-4 h-4 text-gray-400" />
+                    <x-filament::icon icon="heroicon-o-circle-stack" class="w-4 h-4 text-gray-400"  />
                     <span>Storage</span>
                 </span>
                 <span>{{ $stats['human_size'] }}</span>
@@ -78,7 +78,7 @@
                 ])
             >
                 <div class="flex items-center gap-2">
-                    <x-heroicon-o-trash class="w-4 h-4" />
+                    <x-filament::icon icon="heroicon-o-trash" class="w-4 h-4"  />
                     <span>Trash</span>
                 </div>
                 @if ($this->trashedCount > 0)

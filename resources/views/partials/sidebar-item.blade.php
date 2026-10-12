@@ -25,7 +25,7 @@
                 aria-label="{{ $isExpanded ? 'Collapse folder' : 'Expand folder' }}"
                 title="{{ $isExpanded ? 'Collapse' : 'Expand' }}"
             >
-                <x-heroicon-m-chevron-right
+                <x-filament::icon icon="heroicon-m-chevron-right"
                     @class([
                         'w-3.5 h-3.5 transition-transform duration-150',
                         'rotate-90 text-gray-600 dark:text-gray-300' => $isExpanded,
@@ -47,9 +47,9 @@
             ])
         >
             @if ($isExpanded)
-                <x-heroicon-s-folder-open class="w-4 h-4 shrink-0 text-yellow-500" />
+                <x-filament::icon icon="heroicon-s-folder-open" class="w-4 h-4 shrink-0 text-yellow-500"  />
             @else
-                <x-heroicon-s-folder class="w-4 h-4 shrink-0 text-yellow-400" />
+                <x-filament::icon icon="heroicon-s-folder" class="w-4 h-4 shrink-0 text-yellow-400"  />
             @endif
             <span class="truncate text-left">{{ $folder->display_name }}</span>
         </button>

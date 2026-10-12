@@ -4,7 +4,7 @@ A file manager and media picker plugin for Laravel and Filament.
 
 ## Documentation
 
-Full documentation is available at [filament-sanchaya.dineshphuyel.com.np](https://filament-sanchaya.dineshphuyel.com.np/).
+Full documentation for the current v1.1.0 release is available at [filament-sanchaya.dineshphuyel.com.np](https://filament-sanchaya.dineshphuyel.com.np/v1.1.0/).
 
 ## Requirements
 
@@ -32,6 +32,32 @@ public function panel(Panel $panel): Panel
         ]);
 }
 ```
+
+## Picker directories
+
+Use a relative directory to isolate files for a module while keeping the standalone file manager global:
+
+```php
+SanchayaPicker::make('images')
+    ->directory('products');
+```
+
+Storage paths can be customized in `config/filament-sanchaya.php` through `storage.base_directory`, `storage.date_format`, and `storage.path_generator`.
+The picker checks file actions and saved selections against its directory and disk; the standalone manager remains global.
+
+Large-file uploads are available as an opt-in chunked upload mode:
+
+```php
+// config/filament-sanchaya.php
+'file' => [
+    'chunked' => true,
+    'max_chunked_file_size' => 102400, // KB
+    'chunk_size' => 1024, // KB per request
+],
+```
+
+The picker can enable or disable the mode independently with `->chunked()` or `->chunked(false)`. Standard uploads keep the Upload action disabled until the browser has finished transferring the selected file.
+In a multiple-file picker, chunked uploads run sequentially and the dialog closes after the final file succeeds.
 
 ## Development
 

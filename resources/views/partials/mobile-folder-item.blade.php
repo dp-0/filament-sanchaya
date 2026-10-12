@@ -12,7 +12,7 @@
         'text-gray-600 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700' => ! $isActive,
     ])
 >
-    <x-heroicon-o-folder class="w-3.5 h-3.5 text-yellow-500" />
+    <x-filament::icon icon="heroicon-o-folder" class="w-3.5 h-3.5 text-yellow-500"  />
     <span class="whitespace-nowrap">{{ $folder->display_name }}</span>
 </button>
 

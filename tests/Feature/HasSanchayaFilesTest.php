@@ -2,7 +2,7 @@
 
 namespace DP0\Sanchaya\Tests\Feature;
 
-use App\Models\User;
+use DP0\Sanchaya\Tests\Fixtures\User;
 use DP0\Sanchaya\Models\SanchayaFile;
 use DP0\Sanchaya\Tests\TestCase;
 

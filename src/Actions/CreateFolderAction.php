@@ -3,6 +3,7 @@
 namespace DP0\Sanchaya\Actions;
 
 use DP0\Sanchaya\Models\SanchayaFile;
+use DP0\Sanchaya\Contracts\PathGenerator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
@@ -17,16 +18,27 @@ class CreateFolderAction
      *
      * @throws ValidationException
      */
-    public function execute(string $name, string $disk, ?int $parentId = null): SanchayaFile
+    public function execute(string $name, string $disk, ?int $parentId = null, ?string $directory = null): SanchayaFile
     {
         $name = trim($name);
 
         $this->validate($name, $disk, $parentId);
 
+        if ($parentId !== null) {
+            /** @var SanchayaFile $fileModel */
+            $fileModel = config('filament-sanchaya.model', SanchayaFile::class);
+            $parent = $fileModel::findOrFail($parentId);
+            $generator = app(PathGenerator::class);
+
+            if (! $parent->is_folder || $parent->disk !== $disk || ($directory !== null && ! $generator->isWithin($parent->path, $directory))) {
+                throw ValidationException::withMessages(['parent' => 'The parent folder is outside the selected directory or disk.']);
+            }
+        }
+
         $folderName = Str::slug($name, '-');
 
         // Build the storage path (not used to store bytes, just for consistency)
-        $path = $this->resolvePath($folderName, $parentId, $disk);
+        $path = $this->resolvePath($folderName, $parentId, $disk, $directory);
 
         /** @var SanchayaFile $fileModel */
         $fileModel = config('filament-sanchaya.model', SanchayaFile::class);
@@ -75,7 +87,7 @@ class CreateFolderAction
         }
     }
 
-    protected function resolvePath(string $folderName, ?int $parentId, string $disk): string
+    protected function resolvePath(string $folderName, ?int $parentId, string $disk, ?string $directory = null): string
     {
         if ($parentId !== null) {
             /** @var SanchayaFile $fileModel */
@@ -83,10 +95,13 @@ class CreateFolderAction
             $parent = $fileModel::find($parentId);
 
             if ($parent) {
-                return rtrim($parent->path, '/').'/'.$folderName;
+                return app(PathGenerator::class)->childPath($parent->path, $folderName);
             }
         }
 
-        return $folderName;
+        $generator = app(PathGenerator::class);
+        $root = $generator->folderRootPath($directory);
+
+        return $root === '' ? $folderName : $generator->childPath($root, $folderName);
     }
 }

@@ -15,7 +15,13 @@ class FilePicker extends FileBrowser
     public function selectFile(int $id): void
     {
         $id = (int) $id;
-        $this->selectedIds = $this->normalizeSelectedIds($this->selectedIds);
+        $this->selectedIds = $this->filterSelectedIdsToScope($this->normalizeSelectedIds($this->selectedIds));
+
+        $file = $this->fileModel()::query()->find($id);
+
+        if (! $file || $file->disk !== $this->disk || ! $this->isPathInDirectory($file->path) || ! $file->is_file) {
+            return;
+        }
 
         if ($this->multiple) {
             if (in_array($id, $this->selectedIds, true)) {
@@ -38,6 +44,8 @@ class FilePicker extends FileBrowser
 
     public function toggleSelectAll(): void
     {
+        $this->selectedIds = $this->filterSelectedIdsToScope($this->normalizeSelectedIds($this->selectedIds));
+
         if (! $this->allowsBulkSelection()) {
             $this->selectedIds = [];
             $this->selectAll = false;
@@ -80,7 +88,9 @@ class FilePicker extends FileBrowser
 
     public function confirmSelection(): void
     {
-        $ids = $this->normalizeSelectedIds($this->selectedIds);
+        $ids = $this->filterSelectedIdsToScope($this->normalizeSelectedIds($this->selectedIds));
+        $this->selectedIds = $this->multiple ? $ids : array_slice($ids, 0, 1);
+        $ids = $this->selectedIds;
 
         $this->dispatch(
             'sanchaya:selected',
