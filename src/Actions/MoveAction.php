@@ -3,6 +3,7 @@
 namespace DP0\Sanchaya\Actions;
 
 use DP0\Sanchaya\Models\SanchayaFile;
+use DP0\Sanchaya\Contracts\PathGenerator;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 
@@ -17,27 +18,29 @@ class MoveAction
      *
      * @throws ValidationException
      */
-    public function execute(SanchayaFile $item, ?int $destinationId, ?string $destinationDisk = null): SanchayaFile
+    public function execute(SanchayaFile $item, ?int $destinationId, ?string $destinationDisk = null, ?string $directory = null): SanchayaFile
     {
         $targetDisk = $destinationDisk ?? $item->disk;
 
-        $this->validate($item, $destinationId, $targetDisk);
+        $this->validate($item, $destinationId, $targetDisk, $directory);
 
         $destination = $destinationId
             ? $this->resolveDestination($destinationId)
             : null;
 
         if ($item->is_file) {
-            return $this->moveFile($item, $destination, $targetDisk);
+            return $this->moveFile($item, $destination, $targetDisk, $directory);
         }
 
-        return $this->moveFolder($item, $destination, $targetDisk);
+        return $this->moveFolder($item, $destination, $targetDisk, $directory);
     }
 
-    protected function moveFile(SanchayaFile $file, ?SanchayaFile $destination, string $targetDisk): SanchayaFile
+    protected function moveFile(SanchayaFile $file, ?SanchayaFile $destination, string $targetDisk, ?string $directory = null): SanchayaFile
     {
-        $basePath = $destination ? rtrim($destination->path, '/') : 'sanchaya/'.now()->format('Y/m');
-        $newPath = $basePath.'/'.$file->file_name;
+        $generator = app(PathGenerator::class);
+        $newPath = $destination
+            ? $generator->childPath($destination->path, $file->file_name)
+            : $generator->childPath($generator->rootPath($directory), $file->file_name);
 
         // Cross-disk move: copy then delete
         if ($targetDisk !== $file->disk) {
@@ -57,12 +60,16 @@ class MoveAction
         return $file->fresh();
     }
 
-    protected function moveFolder(SanchayaFile $folder, ?SanchayaFile $destination, string $targetDisk): SanchayaFile
+    protected function moveFolder(SanchayaFile $folder, ?SanchayaFile $destination, string $targetDisk, ?string $directory = null): SanchayaFile
     {
         $sourceDisk = $folder->disk;
         $oldPath = $folder->path;
-        $basePath = $destination ? rtrim($destination->path, '/') : '';
-        $newPath = $basePath ? $basePath.'/'.$folder->file_name : $folder->file_name;
+        $generator = app(PathGenerator::class);
+        $newPath = $destination
+            ? $generator->childPath($destination->path, $folder->file_name)
+            : (($root = $generator->folderRootPath($directory)) === ''
+                ? $folder->file_name
+                : $generator->childPath($root, $folder->file_name));
 
         $folder->update([
             'parent_id' => $destination?->id,
@@ -107,8 +114,21 @@ class MoveAction
         return $fileModel::findOrFail($destinationId);
     }
 
-    protected function validate(SanchayaFile $item, ?int $destinationId, string $targetDisk): void
+    protected function validate(SanchayaFile $item, ?int $destinationId, string $targetDisk, ?string $directory = null): void
     {
+        $generator = app(PathGenerator::class);
+
+        if ($directory !== null && ! $generator->isWithin($item->path, $directory)) {
+            throw ValidationException::withMessages(['destination' => 'The item is outside the selected directory.']);
+        }
+
+        if ($directory !== null && $destinationId !== null) {
+            $destination = $this->resolveDestination($destinationId);
+
+            if (! $generator->isWithin($destination->path, $directory)) {
+                throw ValidationException::withMessages(['destination' => 'The destination is outside the selected directory.']);
+            }
+        }
         // Cannot move into itself
         if ($destinationId === $item->id) {
             throw ValidationException::withMessages([

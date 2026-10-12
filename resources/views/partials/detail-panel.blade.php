@@ -21,16 +21,16 @@
                 </video>
             @elseif ($file->is_audio && $file->preview_url)
                 <div class="w-full p-4 space-y-3 text-center">
-                    <x-heroicon-o-musical-note class="w-16 h-16 mx-auto text-primary-500" />
+                    <x-filament::icon icon="heroicon-o-musical-note" class="w-16 h-16 mx-auto text-primary-500"  />
                     <audio controls class="w-full">
                         <source src="{{ $file->preview_url }}" type="{{ $file->mime_type }}">
                     </audio>
                 </div>
             @elseif ($file->is_folder)
-                <x-heroicon-o-folder class="w-20 h-20 text-amber-500" />
+                <x-filament::icon icon="heroicon-o-folder" class="w-20 h-20 text-amber-500"  />
             @else
                 <div class="text-center p-4">
-                    <x-heroicon-o-document class="w-20 h-20 mx-auto text-gray-400 dark:text-gray-500 mb-2" />
+                    <x-filament::icon icon="heroicon-o-document" class="w-20 h-20 mx-auto text-gray-400 dark:text-gray-500 mb-2"  />
                     <span class="text-xs uppercase tracking-wider font-semibold text-gray-500 dark:text-gray-400">
                         {{ $file->extension ?? 'File' }}
                     </span>
@@ -188,7 +188,7 @@
                 @if ($duplicates->isNotEmpty())
                     <div class="pt-4 border-t border-gray-200 dark:border-gray-700/60">
                         <div class="flex items-center gap-1 text-amber-600 dark:text-amber-400 mb-2">
-                            <x-heroicon-m-exclamation-triangle class="w-4 h-4" />
+                            <x-filament::icon icon="heroicon-m-exclamation-triangle" class="w-4 h-4"  />
                             <h3 class="text-xs font-bold uppercase tracking-wider">
                                 Potential Duplicates ({{ $duplicates->count() }})
                             </h3>

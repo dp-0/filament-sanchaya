@@ -2,7 +2,7 @@
 
 namespace DP0\Sanchaya\Tests\Feature;
 
-use App\Models\User;
+use DP0\Sanchaya\Tests\Fixtures\User;
 use DP0\Sanchaya\Livewire\FileManager;
 use DP0\Sanchaya\Livewire\FilePicker;
 use DP0\Sanchaya\Models\SanchayaFile;
@@ -137,6 +137,34 @@ class FileManagerLivewireTest extends TestCase
             ->assertSet('selectedIds', [$file1->id, $file2->id])
             ->call('toggleSelectAll')
             ->assertSet('selectedIds', []);
+    }
+
+    public function test_file_picker_directory_only_shows_files_in_that_directory(): void
+    {
+        $inside = SanchayaFile::create([
+            'type' => 'file',
+            'disk' => 'public',
+            'path' => 'sanchaya/products/2026/10/inside.jpg',
+            'file_name' => 'inside.jpg',
+            'original_name' => 'Inside.jpg',
+        ]);
+
+        SanchayaFile::create([
+            'type' => 'file',
+            'disk' => 'public',
+            'path' => 'sanchaya/private/2026/10/hidden.jpg',
+            'file_name' => 'hidden.jpg',
+            'original_name' => 'Hidden.jpg',
+        ]);
+
+        Livewire::test(FilePicker::class, [
+            'pickerId' => 'products',
+            'directory' => 'products',
+        ])
+            ->assertSee('Inside.jpg')
+            ->assertDontSee('Hidden.jpg')
+            ->call('selectFile', $inside->id)
+            ->assertSet('selectedIds', [$inside->id]);
     }
 
     public function test_file_manager_select_all_toggles_checked_items(): void

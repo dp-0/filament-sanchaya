@@ -34,8 +34,29 @@ return [
 
     'default_disk' => env('SANCHAYA_DEFAULT_DISK', 'public'),
 
+    'storage' => [
+        'base_directory' => 'sanchaya',
+        'date_format' => 'Y/m',
+        'path_generator' => \DP0\Sanchaya\Support\DefaultPathGenerator::class,
+    ],
+
     'file' => [
         'max_file_size' => 10240, // KB
+        'chunked' => false, // Opt in to large-file uploads in the file manager and picker.
+        'max_chunked_file_size' => 102400, // KB; 100 MB by default
+        'chunk_size' => 2048, // KB per request for large-file uploads
+        'finalizer' => \DP0\Sanchaya\Actions\FinalizeChunkedUploadAction::class,
+        'chunk_upload' => [
+            'register_route' => true,
+            'route_name' => 'sanchaya.upload-chunk',
+            'uri' => 'sanchaya/upload-chunk',
+            'require_signed_url' => true,
+            'signed_url_expiration' => 120, // minutes
+            'middleware' => [
+                'web',
+                'throttle:600,1',
+            ],
+        ],
         'accepted_file_types' => [], // e.g. ['image/*', 'application/pdf'] or empty for all
     ],
 

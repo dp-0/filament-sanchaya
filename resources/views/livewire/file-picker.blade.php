@@ -47,7 +47,7 @@
 		<div class="flex-1 overflow-y-auto p-4 flex flex-col">
 			@if ($this->items->isEmpty())
 				<div class="flex flex-col items-center justify-center flex-1 text-gray-400 dark:text-gray-500">
-					<x-heroicon-o-folder-open class="w-16 h-16 mb-3 opacity-40" />
+					<x-filament::icon icon="heroicon-o-folder-open" class="w-16 h-16 mb-3 opacity-40"  />
 					<p class="text-sm font-medium">
 						@if ($search !== '' || $mimeFilter !== '')
 							No files match your filters.
@@ -88,7 +88,7 @@
 								<button type="button" wire:click="setSortBy('name')" class="flex items-center gap-1 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
 									Name
 									@if ($sortBy === 'name')
-										<x-heroicon-m-chevron-up-down class="w-3 h-3" />
+										<x-filament::icon icon="heroicon-m-chevron-up-down" class="w-3 h-3"  />
 									@endif
 								</button>
 							</th>
@@ -96,7 +96,7 @@
 								<button type="button" wire:click="setSortBy('size')" class="flex items-center gap-1 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
 									Size
 									@if ($sortBy === 'size')
-										<x-heroicon-m-chevron-up-down class="w-3 h-3" />
+										<x-filament::icon icon="heroicon-m-chevron-up-down" class="w-3 h-3"  />
 									@endif
 								</button>
 							</th>
@@ -105,7 +105,7 @@
 								<button type="button" wire:click="setSortBy('date')" class="flex items-center gap-1 hover:text-gray-900 dark:hover:text-gray-100 transition-colors">
 									Date
 									@if ($sortBy === 'date')
-										<x-heroicon-m-chevron-up-down class="w-3 h-3" />
+										<x-filament::icon icon="heroicon-m-chevron-up-down" class="w-3 h-3"  />
 									@endif
 								</button>
 							</th>

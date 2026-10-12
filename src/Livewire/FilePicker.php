@@ -17,6 +17,12 @@ class FilePicker extends FileBrowser
         $id = (int) $id;
         $this->selectedIds = $this->normalizeSelectedIds($this->selectedIds);
 
+        $file = $this->fileModel()::query()->find($id);
+
+        if (! $file || $file->disk !== $this->disk || ! $this->isPathInDirectory($file->path) || ! $file->is_file) {
+            return;
+        }
+
         if ($this->multiple) {
             if (in_array($id, $this->selectedIds, true)) {
                 $this->selectedIds = array_values(array_filter($this->selectedIds, fn ($i) => $i !== $id));

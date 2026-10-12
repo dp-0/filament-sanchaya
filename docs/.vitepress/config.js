@@ -9,7 +9,55 @@ function canonicalUrl(relativePath) {
     .replace(/(^|\/)index\.md$/, '$1')
     .replace(/\.md$/, '')
 
-  return `${hostname}/${path}`.replace(/\/$/, '') + '/'
+  return `${hostname}/${path}`
+}
+
+function versionSidebar(version) {
+  const link = (page = '') => `/${version}/${page}`
+
+  return [
+    {
+      text: 'Getting Started',
+      items: [
+        { text: 'Overview', link: link() },
+        { text: 'Installation', link: link('installation') },
+        { text: 'Configuration', link: link('configuration') },
+        { text: 'Plugin Registration', link: link('plugin-registration') },
+      ],
+    },
+    {
+      text: 'Security',
+      items: [{ text: 'Authorization', link: link('authorization') }],
+    },
+    {
+      text: 'Core UI & Components',
+      items: [
+        { text: 'File Manager & Bulk Actions', link: link('file-manager') },
+        { text: 'Trash Bin & Soft Deletes', link: link('trash') },
+        { text: 'SanchayaPicker Field', link: link('sanchaya-picker') },
+        { text: 'SanchayaColumn', link: link('sanchaya-column') },
+        { text: 'SanchayaEntry', link: link('sanchaya-entry') },
+      ],
+    },
+    {
+      text: 'Logic & Data',
+      items: [
+        { text: 'HasSanchayaFiles Trait', link: link('has-sanchaya-files') },
+        { text: 'SanchayaFile & Metadata', link: link('sanchaya-file-model') },
+        { text: 'Database Schema', link: link('database-schema') },
+      ],
+    },
+    {
+      text: 'Advanced',
+      items: [
+        { text: 'Chunked Uploads', link: link('chunked-uploads') },
+        { text: 'Built-in Actions', link: link('actions') },
+        { text: 'Extensibility', link: link('extensibility') },
+        { text: 'Automated Testing', link: link('testing') },
+        { text: 'Troubleshooting', link: link('troubleshooting') },
+      ],
+    },
+  ]
 }
 
 export default defineConfig({
@@ -54,59 +102,18 @@ export default defineConfig({
       alt: 'Filament Sanchaya',
     },
     nav: [
-      { text: 'Docs', link: '/v1.0.2/' },
+      { text: 'Docs', link: '/v1.1.0/' },
       {
-        text: 'v1.0.2',
+        text: 'v1.1.0',
         items: [
+          { text: 'v1.1.0', link: '/v1.1.0/' },
           { text: 'v1.0.2', link: '/v1.0.2/' },
         ],
       },
     ],
     sidebar: {
-      '/v1.0.2/': [
-        {
-          text: 'Getting Started',
-          items: [
-            { text: 'Overview', link: '/v1.0.2/' },
-            { text: 'Installation', link: '/v1.0.2/installation' },
-            { text: 'Configuration', link: '/v1.0.2/configuration' },
-            { text: 'Plugin Registration', link: '/v1.0.2/plugin-registration' },
-          ],
-        },
-        {
-          text: 'Security',
-          items: [
-            { text: 'Authorization', link: '/v1.0.2/authorization' },
-          ],
-        },
-        {
-          text: 'Core UI & Components',
-          items: [
-            { text: 'File Manager & Bulk Actions', link: '/v1.0.2/file-manager' },
-            { text: 'Trash Bin & Soft Deletes', link: '/v1.0.2/trash' },
-            { text: 'SanchayaPicker Field', link: '/v1.0.2/sanchaya-picker' },
-            { text: 'SanchayaColumn', link: '/v1.0.2/sanchaya-column' },
-            { text: 'SanchayaEntry', link: '/v1.0.2/sanchaya-entry' },
-          ],
-        },
-        {
-          text: 'Logic & Data',
-          items: [
-            { text: 'HasSanchayaFiles Trait', link: '/v1.0.2/has-sanchaya-files' },
-            { text: 'SanchayaFile & Metadata', link: '/v1.0.2/sanchaya-file-model' },
-            { text: 'Database Schema', link: '/v1.0.2/database-schema' },
-          ],
-        },
-        {
-          text: 'Advanced',
-          items: [
-            { text: 'Built-in Actions', link: '/v1.0.2/actions' },
-            { text: 'Extensibility', link: '/v1.0.2/extensibility' },
-            { text: 'Automated Testing', link: '/v1.0.2/testing' },
-            { text: 'Troubleshooting', link: '/v1.0.2/troubleshooting' },
-          ],
-        },
-      ],
+      '/v1.1.0/': versionSidebar('v1.1.0'),
+      '/v1.0.2/': versionSidebar('v1.0.2'),
     },
     search: {
       provider: 'local',

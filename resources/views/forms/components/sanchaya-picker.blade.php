@@ -159,7 +159,7 @@
     >
         <div class="flex items-center gap-2">
             <span class="inline-flex items-center gap-1 rounded-full bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 px-2 py-0.5 text-xs font-medium">
-                <x-heroicon-m-photo class="w-3.5 h-3.5" />
+                <x-filament::icon icon="heroicon-m-photo" class="w-3.5 h-3.5"  />
                 Selected: <span x-text="selectedCount()"></span>
             </span>
         </div>
@@ -176,7 +176,7 @@
                 </span>
                 <span class="inline-flex items-center gap-1 text-xs text-gray-500 dark:text-gray-400">
                     <span x-text="previewItems.length"></span>
-                    <x-heroicon-m-chevron-down class="w-4 h-4 transition-transform" x-bind:class="previewOpen ? 'rotate-180' : ''" />
+                    <x-filament::icon icon="heroicon-m-chevron-down" class="w-4 h-4 transition-transform" x-bind:class="previewOpen ? 'rotate-180' : ''"  />
                 </span>
             </button>
 
@@ -198,7 +198,7 @@
                         <div class="flex items-center justify-center bg-gray-100 dark:bg-gray-700 {{ $isMultiple ? 'aspect-square' : 'w-full h-24 shrink-0' }}">
                             <template x-if="file.missing">
                                 <div class="flex flex-col items-center gap-1">
-                                    <x-heroicon-o-exclamation-triangle class="w-8 h-8 text-danger-500" />
+                                    <x-filament::icon icon="heroicon-o-exclamation-triangle" class="w-8 h-8 text-danger-500"  />
                                     <span class="text-[11px] text-danger-600 dark:text-danger-400">Missing</span>
                                 </div>
                             </template>
@@ -206,13 +206,13 @@
                                 <img :src="file.preview_url" :alt="file.display_name" class="w-full h-full object-cover select-none" draggable="false" />
                             </template>
                             <template x-if="!file.missing && file.kind === 'video'">
-                                <x-heroicon-o-film class="w-8 h-8 text-purple-400" />
+                                <x-filament::icon icon="heroicon-o-film" class="w-8 h-8 text-purple-400"  />
                             </template>
                             <template x-if="!file.missing && file.kind === 'audio'">
-                                <x-heroicon-o-musical-note class="w-8 h-8 text-blue-400" />
+                                <x-filament::icon icon="heroicon-o-musical-note" class="w-8 h-8 text-blue-400"  />
                             </template>
                             <template x-if="!file.missing && file.kind === 'document'">
-                                <x-heroicon-o-document class="w-8 h-8 text-gray-400" />
+                                <x-filament::icon icon="heroicon-o-document" class="w-8 h-8 text-gray-400"  />
                             </template>
                         </div>
 
@@ -227,7 +227,7 @@
                                     download
                                     class="inline-flex items-center gap-1 text-xs text-primary-600 dark:text-primary-400 hover:underline mt-1"
                                 >
-                                    <x-heroicon-m-arrow-down-tray class="w-3 h-3" />
+                                    <x-filament::icon icon="heroicon-m-arrow-down-tray" class="w-3 h-3"  />
                                     Download
                                 </a>
                             @endif
@@ -240,7 +240,7 @@
                                 class="absolute top-1 right-1 w-5 h-5 rounded-full bg-danger-500 text-white items-center justify-center hidden group-hover:flex shadow z-10"
                                 title="Remove"
                             >
-                                <x-heroicon-m-x-mark class="w-3 h-3" />
+                                <x-filament::icon icon="heroicon-m-x-mark" class="w-3 h-3"  />
                             </button>
                         @endif
 
@@ -253,7 +253,7 @@
                                     class="p-0.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
                                     title="Move earlier"
                                 >
-                                    <x-heroicon-m-chevron-left class="w-3.5 h-3.5" />
+                                    <x-filament::icon icon="heroicon-m-chevron-left" class="w-3.5 h-3.5"  />
                                 </button>
                                 <button
                                     type="button"
@@ -262,7 +262,7 @@
                                     class="p-0.5 text-gray-500 hover:text-gray-800 dark:hover:text-gray-200 rounded hover:bg-gray-100 dark:hover:bg-gray-700"
                                     title="Move later"
                                 >
-                                    <x-heroicon-m-chevron-right class="w-3.5 h-3.5" />
+                                    <x-filament::icon icon="heroicon-m-chevron-right" class="w-3.5 h-3.5"  />
                                 </button>
                             </div>
                         @endif
@@ -330,8 +330,11 @@
                     'allowedTypes' => $field->getAllowedTypes(),
                     'uploadAcceptedFileTypes' => $field->getUploadAcceptedFileTypes(),
                     'uploadMaxFileSize' => $field->getUploadMaxFileSize(),
+                    'chunkedUploadMaxFileSize' => $field->getChunkedUploadMaxFileSize(),
+                    'chunked' => $field->isChunked(),
                     'selectedIds'  => is_array($getState()) ? $getState() : ($getState() ? [$getState()] : []),
                     'disk'         => $field->getDisk(),
+                    'directory'    => $field->getDirectory(),
                 ], key($fieldKey))
             </div>
         </x-filament::modal>

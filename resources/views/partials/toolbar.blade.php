@@ -26,7 +26,7 @@
     <div class="flex-1 min-w-44">
         <div class="relative">
             <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                <x-heroicon-m-magnifying-glass class="w-4 h-4 text-gray-400 dark:text-gray-500" />
+                <x-filament::icon icon="heroicon-m-magnifying-glass" class="w-4 h-4 text-gray-400 dark:text-gray-500"  />
             </span>
             <input
                 type="search"
@@ -101,7 +101,7 @@
                    hover:bg-warning-100 dark:hover:bg-warning-900/50
                    transition-colors"
         >
-            <x-heroicon-m-x-mark class="w-3.5 h-3.5" />
+            <x-filament::icon icon="heroicon-m-x-mark" class="w-3.5 h-3.5"  />
             Clear filters
         </button>
     @endif
@@ -119,7 +119,7 @@
                 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700' => $viewMode !== 'grid',
             ])
         >
-            <x-heroicon-m-squares-2x2 class="w-4 h-4" />
+            <x-filament::icon icon="heroicon-m-squares-2x2" class="w-4 h-4"  />
         </button>
         <button
             type="button"
@@ -131,14 +131,14 @@
                 'bg-white dark:bg-gray-800 text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700' => $viewMode !== 'list',
             ])
         >
-            <x-heroicon-m-list-bullet class="w-4 h-4" />
+            <x-filament::icon icon="heroicon-m-list-bullet" class="w-4 h-4"  />
         </button>
     </div>
 
     {{-- Picker selection counter & actions --}}
     @if (! empty($isPicker))
         <span class="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium bg-primary-50 text-primary-700 dark:bg-primary-900/30 dark:text-primary-300 flex-shrink-0">
-            <x-heroicon-m-check-circle class="w-3.5 h-3.5" />
+            <x-filament::icon icon="heroicon-m-check-circle" class="w-3.5 h-3.5"  />
             {{ count($selectedIds) }} selected
         </span>
 

@@ -21,10 +21,10 @@
                        hover:bg-gray-200 dark:hover:bg-gray-700 transition-colors"
                 :aria-expanded="open.toString()"
             >
-                <x-heroicon-m-chevron-right
+                <x-filament::icon icon="heroicon-m-chevron-right"
                     class="w-3.5 h-3.5 transition-transform duration-150"
                     ::class="open ? 'rotate-90 text-gray-600 dark:text-gray-300' : ''"
-                />
+                 />
             </button>
         @else
             <span class="w-5 shrink-0"></span>
@@ -40,7 +40,7 @@
                 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800'              => ! $isSelected,
             ])
         >
-            <x-heroicon-o-folder class="w-4 h-4 shrink-0 text-yellow-400" />
+            <x-filament::icon icon="heroicon-o-folder" class="w-4 h-4 shrink-0 text-yellow-400"  />
             <span class="truncate text-left">{{ $folder->display_name }}</span>
         </button>
 

@@ -4,6 +4,7 @@ namespace DP0\Sanchaya\Forms\Components;
 
 use Closure;
 use DP0\Sanchaya\Models\SanchayaFile;
+use DP0\Sanchaya\Contracts\PathGenerator;
 use Filament\Actions\Action;
 use Filament\Forms\Components\Field;
 use Filament\Support\Enums\Width;
@@ -23,6 +24,9 @@ class SanchayaPicker extends Field
     /** Default disk shown in the picker */
     protected ?string $disk = null;
 
+    /** Optional relative storage namespace for this picker. */
+    protected ?string $directory = null;
+
     /** Max number of files (multiple mode only, null = unlimited) */
     protected ?int $maxFiles = null;
 
@@ -31,6 +35,10 @@ class SanchayaPicker extends Field
 
     /** Upload max file size in KB */
     protected ?int $uploadMaxFileSize = null;
+
+    protected ?int $chunkedUploadMaxFileSize = null;
+
+    protected bool $chunked = false;
 
     /** Optional group for morphable attachment syncing. Null = default slot. */
     protected ?string $group = null;
@@ -60,6 +68,8 @@ class SanchayaPicker extends Field
             ? config('filament-sanchaya.file.accepted_file_types', [])
             : [];
         $instance->uploadMaxFileSize = (int) config('filament-sanchaya.file.max_file_size', 10240);
+        $instance->chunkedUploadMaxFileSize = (int) config('filament-sanchaya.file.max_chunked_file_size', 102400);
+        $instance->chunked = (bool) config('filament-sanchaya.file.chunked', false);
         $instance->disk = config('filament-sanchaya.default_disk', 'public');
         $instance->isReadOnly = config('filament-sanchaya.default_read_only', false);
 
@@ -94,6 +104,18 @@ class SanchayaPicker extends Field
         return $this;
     }
 
+    public function directory(?string $directory): static
+    {
+        $this->directory = app(\DP0\Sanchaya\Contracts\PathGenerator::class)->normalizeDirectory($directory);
+
+        return $this;
+    }
+
+    public function getDirectory(): ?string
+    {
+        return $this->directory;
+    }
+
     public function maxFiles(int $max): static
     {
         $this->maxFiles = $max;
@@ -113,6 +135,30 @@ class SanchayaPicker extends Field
         $this->uploadMaxFileSize = $maxKb;
 
         return $this;
+    }
+
+    public function chunkedUploadMaxFileSize(int $maxKb): static
+    {
+        $this->chunkedUploadMaxFileSize = $maxKb;
+
+        return $this;
+    }
+
+    public function chunked(bool $condition = true): static
+    {
+        $this->chunked = $condition;
+
+        return $this;
+    }
+
+    public function isChunked(): bool
+    {
+        return $this->chunked;
+    }
+
+    public function getChunkedUploadMaxFileSize(): int
+    {
+        return $this->chunkedUploadMaxFileSize ?: (int) config('filament-sanchaya.file.max_chunked_file_size', 102400);
     }
 
     public function saveInGroup(?string $group): static
@@ -235,8 +281,14 @@ class SanchayaPicker extends Field
 
         $filesById = $fileModel::query()
             ->whereKey($ids)
+            ->where('disk', $this->getDisk())
             ->get()
             ->keyBy(fn (Model $file) => (string) $file->getKey());
+
+        if ($this->directory !== null) {
+            $generator = app(PathGenerator::class);
+            $filesById = $filesById->filter(fn (Model $file): bool => $generator->isWithin($file->path, $this->directory));
+        }
 
         return collect($ids)
             ->map(fn ($id) => $filesById->get((string) $id))
@@ -305,6 +357,14 @@ class SanchayaPicker extends Field
     public function handleSelection(array $ids): void
     {
         $ids = $this->normalizeIds($ids);
+
+        $validIds = $this->getSelectedFiles()
+            ->filter(fn (SanchayaFile $file): bool => in_array((string) $file->getKey(), array_map('strval', $ids), true))
+            ->pluck('id')
+            ->map(fn ($id) => (int) $id)
+            ->all();
+
+        $ids = array_values(array_intersect($ids, $validIds));
 
         if ($this->isMultiple) {
             // Enforce max files

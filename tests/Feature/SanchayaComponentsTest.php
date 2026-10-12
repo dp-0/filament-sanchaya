@@ -2,7 +2,7 @@
 
 namespace DP0\Sanchaya\Tests\Feature;
 
-use App\Models\User;
+use DP0\Sanchaya\Tests\Fixtures\User;
 use DP0\Sanchaya\Forms\Components\SanchayaPicker;
 use DP0\Sanchaya\Infolists\Components\SanchayaEntry;
 use DP0\Sanchaya\Models\SanchayaFile;
@@ -20,6 +20,9 @@ class SanchayaComponentsTest extends TestCase
             ->saveInGroup('avatar')
             ->uploadMaxFileSize(2048);
 
+        $this->assertFalse($picker->isChunked());
+        $picker->chunked()->chunkedUploadMaxFileSize(51200);
+
         $this->assertTrue($picker->isMultiple());
         $this->assertTrue($picker->isReorderable());
         $picker->reorderable(false);
@@ -28,6 +31,20 @@ class SanchayaComponentsTest extends TestCase
         $this->assertEquals(['image'], $picker->getAllowedTypes());
         $this->assertEquals('avatar', $picker->getGroup());
         $this->assertEquals(2048, $picker->getUploadMaxFileSize());
+        $this->assertEquals(51200, $picker->getChunkedUploadMaxFileSize());
+        $this->assertTrue($picker->isChunked());
+        $this->assertFalse($picker->chunked(false)->isChunked());
+
+        config()->set('filament-sanchaya.file.chunked', true);
+        $this->assertTrue(SanchayaPicker::make('global_picker')->isChunked());
+        $this->assertFalse(SanchayaPicker::make('disabled_picker')->chunked(false)->isChunked());
+    }
+
+    public function test_sanchaya_picker_directory_is_normalized(): void
+    {
+        $picker = SanchayaPicker::make('images')->directory('products/catalog/');
+
+        $this->assertSame('products/catalog', $picker->getDirectory());
     }
 
     public function test_sanchaya_column_configuration(): void
