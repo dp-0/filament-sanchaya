@@ -35,5 +35,4 @@ description: "Overview of Filament Sanchaya, a Filament v5 file manager and medi
 <h3>Requirements</h3>
 <ul>
     <li>Filament <code>^5.0</code></li>
-    <li>For filament v4 its not tested.</li>
 </ul>

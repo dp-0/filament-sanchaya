@@ -9,7 +9,6 @@ Documentation for the current v1.1 series, including the v1.1.2 fixes, is availa
 ## Requirements
 
 - Filament v5
-- For filament v4 its not tested.
 
 ## Installation
 
