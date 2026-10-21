@@ -5,6 +5,7 @@ namespace DP0\Sanchaya\Tables\Columns;
 use Closure;
 use DP0\Sanchaya\Models\SanchayaFile;
 use Filament\Tables\Columns\ImageColumn;
+use Illuminate\Database\Eloquent\Model;
 
 class SanchayaColumn extends ImageColumn
 {
@@ -134,7 +135,7 @@ class SanchayaColumn extends ImageColumn
         return $file->thumbnail_url ?? $file->preview_url ?? $file->url;
     }
 
-    public function getImageUrl(?string $state = null): ?string
+    public function getImageUrl(?string $state = null, ?Model $relatedRecord = null): ?string
     {
         if (blank($state)) {
             return null;
@@ -144,6 +145,6 @@ class SanchayaColumn extends ImageColumn
             return $state;
         }
 
-        return parent::getImageUrl($state);
+        return parent::getImageUrl($state, $relatedRecord);
     }
 }

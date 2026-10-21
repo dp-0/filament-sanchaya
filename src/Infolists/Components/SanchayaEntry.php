@@ -137,7 +137,7 @@ class SanchayaEntry extends ImageEntry
         return $file->thumbnail_url ?? $file->preview_url ?? $file->url;
     }
 
-    public function getImageUrl(?string $state = null): ?string
+    public function getImageUrl(?string $state = null, ?Model $relatedRecord = null): ?string
     {
         if (blank($state)) {
             return null;
@@ -147,6 +147,6 @@ class SanchayaEntry extends ImageEntry
             return $state;
         }
 
-        return parent::getImageUrl($state);
+        return parent::getImageUrl($state, $relatedRecord);
     }
 }

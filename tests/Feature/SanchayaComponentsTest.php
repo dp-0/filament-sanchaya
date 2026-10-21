@@ -8,6 +8,7 @@ use DP0\Sanchaya\Infolists\Components\SanchayaEntry;
 use DP0\Sanchaya\Models\SanchayaFile;
 use DP0\Sanchaya\Tables\Columns\SanchayaColumn;
 use DP0\Sanchaya\Tests\TestCase;
+use Illuminate\Support\Facades\Storage;
 
 class SanchayaComponentsTest extends TestCase
 {
@@ -98,6 +99,24 @@ class SanchayaComponentsTest extends TestCase
         $this->assertEquals(['https://custom-preview.test/avatar.jpg'], $column->record($user)->getState());
     }
 
+    public function test_sanchaya_column_image_url_accepts_related_record(): void
+    {
+        $user = User::create([
+            'name' => 'Alice',
+            'email' => 'alice-image@example.com',
+            'password' => 'secret',
+        ]);
+
+        Storage::disk('public')->put('avatar.jpg', 'image bytes');
+
+        $column = SanchayaColumn::make('avatar')->disk('public');
+
+        $this->assertSame(
+            Storage::disk('public')->url('avatar.jpg'),
+            $column->getImageUrl('avatar.jpg', $user),
+        );
+    }
+
     public function test_sanchaya_entry_configuration(): void
     {
         $user = User::create([
@@ -132,6 +151,24 @@ class SanchayaComponentsTest extends TestCase
         // Custom preview callback
         $entry->previewUsing(fn (SanchayaFile $f) => 'https://custom-icon.test/'.$f->extension);
         $this->assertEquals(['https://custom-icon.test/pptx'], $entry->record($user)->getState());
+    }
+
+    public function test_sanchaya_entry_image_url_accepts_related_record(): void
+    {
+        $user = User::create([
+            'name' => 'Charlie',
+            'email' => 'charlie-image@example.com',
+            'password' => 'secret',
+        ]);
+
+        Storage::disk('public')->put('avatar.jpg', 'image bytes');
+
+        $entry = SanchayaEntry::make('avatar')->disk('public');
+
+        $this->assertSame(
+            Storage::disk('public')->url('avatar.jpg'),
+            $entry->getImageUrl('avatar.jpg', $user),
+        );
     }
 
     public function test_sanchaya_seeder_populates_data(): void
