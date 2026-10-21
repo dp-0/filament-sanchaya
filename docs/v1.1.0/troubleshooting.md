@@ -13,6 +13,12 @@ description: "Fix common Filament Sanchaya installation, styling, upload, and di
 </div>
 <div class="callout callout-note">
     <div class="callout-content">
+        <strong>Destination folder is not available on this disk</strong>
+        <p>Confirm that the upload disk matches the folder's disk. For a directory-scoped picker, the destination folder must also be inside that directory. Chunked uploads to folders created at the standalone manager root are supported from v1.1.1.</p>
+    </div>
+</div>
+<div class="callout callout-note">
+    <div class="callout-content">
         <strong>Picker Directory Does Not Show Files</strong>
         <p><code>SanchayaPicker::directory()</code> is relative to <code>storage.base_directory</code>. Confirm that the stored file paths are inside that namespace and that the picker is using the same disk as the files.</p>
     </div>

@@ -11,7 +11,7 @@ description: "Understand soft deletes, trash recovery, and permanent deletion be
 <ul>
     <li><strong>Dedicated Bin View:</strong> Access the Trash Bin directly from the sidebar. Shows all soft-deleted items on the current disk.</li>
     <li><strong>One-Click Restore:</strong> Restore individual items from the context dropdown or select multiple items and click <code>Restore Selected</code>.</li>
-    <li><strong>Permanent Deletion:</strong> Delete individual or selected trashed items to remove stored file contents and database records. Deleting a folder also removes its nested files.</li>
+    <li><strong>Permanent Deletion:</strong> Delete individual or selected trashed items to remove stored file contents and database records. Deleting a folder also removes its nested files, following the original folder hierarchy rather than matching every record with the same storage path.</li>
     <li><strong>Empty Trash:</strong> Purge all trashed files and folders across the selected disk with a single click.</li>
 </ul>
 
@@ -21,3 +21,7 @@ description: "Understand soft deletes, trash recovery, and permanent deletion be
 ```
 
 <p>Permanent deletion cannot be undone. With <code>soft_deletes</code> set to <code>false</code>, the ordinary Delete action is permanent.</p>
+
+<p>Since v1.1.1, you can delete a folder, create another folder with the same name, and then permanently delete the old folder from Trash without deleting the new folder's files. If a stored file path has been reused, Sanchaya keeps the bytes while another file record still references that path.</p>
+
+<p>The Trash view currently lists every deleted record on the selected disk, including files inside a deleted folder. Those child files can therefore appear alongside the folder in the top-level Trash list. The folder still owns them for restore and permanent-delete operations; this is a display behavior, not an extra copy of the files.</p>

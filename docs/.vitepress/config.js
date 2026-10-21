@@ -104,9 +104,9 @@ export default defineConfig({
     nav: [
       { text: 'Docs', link: '/v1.1.0/' },
       {
-        text: 'v1.1.0',
+        text: 'v1.1.x',
         items: [
-          { text: 'v1.1.0', link: '/v1.1.0/' },
+          { text: 'v1.1.x', link: '/v1.1.0/' },
           { text: 'v1.0.2', link: '/v1.0.2/' },
         ],
       },

@@ -36,40 +36,34 @@ class SanchayaFile extends Model
     protected static function booted(): void
     {
         static::deleting(function (SanchayaFile $file): void {
-            if ($file->isForceDeleting()) {
-                if ($file->is_file) {
+            if ($file->is_folder) {
+                $file->children()->withTrashed()->lazyById()->each(function (SanchayaFile $child) use ($file): void {
+                    if ($file->isForceDeleting()) {
+                        $child->forceDelete();
+                    } elseif (! $child->trashed()) {
+                        $child->delete();
+                    }
+                });
+            }
+
+            if ($file->isForceDeleting() && $file->is_file) {
+                $pathIsStillReferenced = static::withTrashed()
+                    ->where('disk', $file->disk)
+                    ->where('path', $file->path)
+                    ->whereKeyNot($file->getKey())
+                    ->exists();
+
+                if (! $pathIsStillReferenced) {
                     Storage::disk($file->disk)->delete($file->path);
                 }
-
-                if ($file->is_folder) {
-                    static::withTrashed()
-                        ->where('disk', $file->disk)
-                        ->where('path', 'like', rtrim($file->path, '/').'/%')
-                        ->where('type', 'file')
-                        ->lazyById()
-                        ->each(function (SanchayaFile $descendant): void {
-                            Storage::disk($descendant->disk)->delete($descendant->path);
-                        });
-
-                    static::withTrashed()
-                        ->where('disk', $file->disk)
-                        ->where('path', 'like', rtrim($file->path, '/').'/%')
-                        ->forceDelete();
-                }
-            } elseif ($file->is_folder) {
-                static::query()
-                    ->where('disk', $file->disk)
-                    ->where('path', 'like', rtrim($file->path, '/').'/%')
-                    ->delete();
             }
         });
 
         static::restoring(function (SanchayaFile $file): void {
             if ($file->is_folder) {
-                static::onlyTrashed()
-                    ->where('disk', $file->disk)
-                    ->where('path', 'like', rtrim($file->path, '/').'/%')
-                    ->restore();
+                $file->children()->onlyTrashed()->lazyById()->each(function (SanchayaFile $child): void {
+                    $child->restore();
+                });
             }
         });
     }

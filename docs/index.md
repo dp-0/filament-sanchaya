@@ -11,7 +11,7 @@ layout: page
       <h1>Filament Sanchaya</h1>
       <p class="sanchaya-copy">A focused file manager and media picker for Filament v5, built for selecting, uploading, attaching, organizing, and recovering files inside your admin panel.</p>
       <div class="sanchaya-actions">
-        <a class="sanchaya-button primary" href="/v1.1.0/">Open v1.1.0 docs</a>
+        <a class="sanchaya-button primary" href="/v1.1.0/">Open v1.1 docs</a>
         <a class="sanchaya-button" href="https://github.com/dp-0/filament-sanchaya">GitHub</a>
       </div>
       <div class="sanchaya-badges">
@@ -30,6 +30,17 @@ layout: page
 
 <section class="sanchaya-section sanchaya-changelog">
   <h2>Changelog</h2>
+  <div class="release">
+    <div class="release-version">v1.1.1</div>
+    <div>
+      <ul>
+        <li>Fixed Trash purging so a deleted folder cannot remove files from a replacement folder with the same path.</li>
+        <li>Preserved file contents when another media record still references a reused path.</li>
+        <li>Updated the picker selection when reopening the media library after removing images.</li>
+        <li>Fixed chunked uploads into folders created at the manager root.</li>
+      </ul>
+    </div>
+  </div>
   <div class="release">
     <div class="release-version">v1.1.0</div>
     <div>

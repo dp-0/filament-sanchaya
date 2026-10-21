@@ -4,9 +4,22 @@ namespace DP0\Sanchaya\Livewire;
 
 use DP0\Sanchaya\Models\SanchayaFile;
 use Illuminate\Contracts\View\View;
+use Livewire\Attributes\On;
 
 class FilePicker extends FileBrowser
 {
+    #[On('sanchaya:sync-selection')]
+    public function syncSelection(string $pickerId, array $ids): void
+    {
+        if ($pickerId !== $this->pickerId) {
+            return;
+        }
+
+        $ids = $this->filterSelectedIdsToScope($this->normalizeSelectedIds($ids));
+        $this->selectedIds = $this->multiple ? $ids : array_slice($ids, 0, 1);
+        $this->selectAll = false;
+    }
+
     public function allowsBulkSelection(): bool
     {
         return $this->multiple;

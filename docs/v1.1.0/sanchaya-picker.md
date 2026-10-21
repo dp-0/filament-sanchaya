@@ -58,6 +58,8 @@ SanchayaPicker::make('manual')
 
 Use <code>->chunked(false)</code> to use the standard Livewire uploader for a field when the global setting is enabled. The two upload controls are mutually exclusive. Standard uploads keep the Upload action disabled until the browser finishes transferring the selected file; the chunked mode assembles chunks before creating the final file record. With <code>multiple()</code>, chunked files are processed one at a time and the upload dialog closes only after the last file succeeds.
 
+Removing a selected image with the <code>X</code> control updates the field selection. When you open <code>Change</code> again, the media library reflects the remaining selected files instead of reselecting the removed image. This behavior is available from v1.1.1.
+
 
 <h3>Method Reference</h3>
 <div class="table-wrap">

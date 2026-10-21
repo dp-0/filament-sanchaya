@@ -140,6 +140,28 @@ class FileManagerLivewireTest extends TestCase
             ->assertSet('selectedIds', []);
     }
 
+    public function test_file_picker_syncs_parent_selection_when_reopened(): void
+    {
+        $first = SanchayaFile::create([
+            'type' => 'file', 'disk' => 'public', 'path' => 'first.jpg',
+            'file_name' => 'first.jpg', 'original_name' => 'first.jpg',
+        ]);
+        $second = SanchayaFile::create([
+            'type' => 'file', 'disk' => 'public', 'path' => 'second.jpg',
+            'file_name' => 'second.jpg', 'original_name' => 'second.jpg',
+        ]);
+
+        Livewire::test(FilePicker::class, [
+            'pickerId' => 'gallery', 'multiple' => true,
+            'selectedIds' => [$first->id, $second->id],
+        ])
+            ->dispatch('sanchaya:sync-selection', pickerId: 'other-picker', ids: [])
+            ->assertSet('selectedIds', [$first->id, $second->id])
+            ->dispatch('sanchaya:sync-selection', pickerId: 'gallery', ids: [$second->id])
+            ->assertSet('selectedIds', [$second->id])
+            ->assertSet('selectAll', false);
+    }
+
     public function test_file_picker_directory_only_shows_files_in_that_directory(): void
     {
         $inside = SanchayaFile::create([

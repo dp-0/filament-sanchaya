@@ -37,6 +37,8 @@ SanchayaPicker::make('gallery')
 
 <p>Chunks are staged in the application's local <code>storage/app/sanchaya-chunks</code> directory. Once all chunks arrive, Sanchaya assembles the file, streams it to the selected disk, and creates the file record. Incomplete uploads older than one day are cleaned up when a new upload starts.</p>
 
+<p>From v1.1.1, chunked uploads also work inside folders created at the standalone manager root, whose paths are relative to the disk root. Directory-scoped pickers still enforce their configured namespace, and the selected disk must match the destination folder's disk.</p>
+
 <p>Multi-server deployments need shared staging storage or request affinity for the duration of an upload. The staging directory must be writable by the application process.</p>
 
 <h3>Custom chunk route</h3>

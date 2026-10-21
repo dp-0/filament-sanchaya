@@ -3,7 +3,6 @@
 namespace DP0\Sanchaya\Actions;
 
 use DP0\Sanchaya\Models\SanchayaFile;
-use Illuminate\Support\Facades\Storage;
 
 class DeleteAction
 {
@@ -49,8 +48,6 @@ class DeleteAction
             return false;
         }
 
-        $this->restoreDescendants($item);
-
         return (bool) $item->restore();
     }
 
@@ -67,38 +64,6 @@ class DeleteAction
 
     protected function forceDelete(SanchayaFile $item): bool
     {
-        /** @var SanchayaFile $fileModel */
-        $fileModel = config('filament-sanchaya.model', SanchayaFile::class);
-
-        $fileModel::withTrashed()
-            ->where('disk', $item->disk)
-            ->where('path', 'like', rtrim($item->path, '/').'/%')
-            ->where('type', 'file')
-            ->lazyById()
-            ->each(function (SanchayaFile $descendant) {
-                Storage::disk($descendant->disk)->delete($descendant->path);
-            });
-
-        $fileModel::withTrashed()
-            ->where('disk', $item->disk)
-            ->where('path', 'like', rtrim($item->path, '/').'/%')
-            ->forceDelete();
-
-        if ($item->is_file) {
-            Storage::disk($item->disk)->delete($item->path);
-        }
-
         return (bool) $item->forceDelete();
-    }
-
-    protected function restoreDescendants(SanchayaFile $item): void
-    {
-        /** @var SanchayaFile $fileModel */
-        $fileModel = config('filament-sanchaya.model', SanchayaFile::class);
-
-        $fileModel::withTrashed()
-            ->where('disk', $item->disk)
-            ->where('path', 'like', rtrim($item->path, '/').'/%')
-            ->restore();
     }
 }

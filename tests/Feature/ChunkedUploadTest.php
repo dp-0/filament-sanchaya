@@ -2,14 +2,16 @@
 
 namespace DP0\Sanchaya\Tests\Feature;
 
-use DP0\Sanchaya\Tests\Fixtures\User;
+use DP0\Sanchaya\Actions\FinalizeChunkedUploadAction;
 use DP0\Sanchaya\Livewire\FileManager;
 use DP0\Sanchaya\Models\SanchayaFile;
+use DP0\Sanchaya\Tests\Fixtures\User;
 use DP0\Sanchaya\Tests\TestCase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 use Livewire\Livewire;
 
 class ChunkedUploadTest extends TestCase
@@ -78,6 +80,58 @@ class ChunkedUploadTest extends TestCase
         $this->assertSame(11, $file->size);
         $this->assertSame(hash('sha256', 'hello world'), $file->checksum);
         $this->assertSame('hello world', Storage::disk('public')->get($file->path));
+    }
+
+    public function test_chunked_upload_into_a_new_root_folder(): void
+    {
+        $this->actingAs(User::create([
+            'name' => 'Admin',
+            'email' => 'chunk-folder@example.com',
+            'password' => 'secret',
+        ]));
+
+        $manager = Livewire::test(FileManager::class)
+            ->set('newFolderName', 'Test')
+            ->call('createFolder')
+            ->assertHasNoErrors();
+
+        $folder = SanchayaFile::query()->folders()->sole();
+        $this->assertSame('test', $folder->path);
+
+        $id = (string) Str::uuid();
+        $this->postJson($this->chunkUrl(), [
+            'id' => $id,
+            'name' => 'photo.jpg',
+            'size' => 5,
+            'offset' => 0,
+            'chunk' => UploadedFile::fake()->createWithContent('part', 'image'),
+        ])->assertOk();
+
+        $manager->call('navigateTo', $folder->id)
+            ->set('uploadData.disk', 'public')
+            ->call('finishChunkUpload', $id)
+            ->assertReturned(['ok' => true]);
+
+        $image = SanchayaFile::query()->files()->sole();
+        $this->assertSame($folder->id, $image->parent_id);
+        $this->assertSame('image', Storage::disk('public')->get($image->path));
+    }
+
+    public function test_chunked_upload_still_rejects_a_folder_outside_the_picker_directory(): void
+    {
+        $folder = SanchayaFile::create([
+            'type' => 'folder', 'disk' => 'public', 'path' => 'sanchaya/private',
+            'file_name' => 'private', 'original_name' => 'Private',
+        ]);
+        $upload = UploadedFile::fake()->createWithContent('photo.jpg', 'image');
+
+        $this->expectException(ValidationException::class);
+
+        app(FinalizeChunkedUploadAction::class)->execute([
+            'path' => $upload->getRealPath(),
+            'name' => 'photo.jpg',
+            'size' => $upload->getSize(),
+        ], 'public', $folder->id, 'products');
     }
 
     public function test_multi_file_chunked_upload_closes_modal_only_after_last_file(): void

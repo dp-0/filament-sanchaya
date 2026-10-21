@@ -88,7 +88,7 @@ class FinalizeChunkedUploadAction implements ChunkUploadFinalizer
                 ->where('type', 'folder')
                 ->first();
 
-            if (! $parent || ! $this->pathGenerator->isWithin($parent->path, $directory)) {
+            if (! $parent || ($directory !== null && ! $this->pathGenerator->isWithin($parent->path, $directory))) {
                 throw ValidationException::withMessages(['upload' => 'The destination folder is not available on this disk.']);
             }
 

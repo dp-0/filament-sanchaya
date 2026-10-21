@@ -88,6 +88,15 @@
                 this.previewItems = [];
             },
 
+            openPicker() {
+                const ids = Array.isArray(this.state)
+                    ? this.state
+                    : (this.state ? [this.state] : []);
+
+                $dispatch('sanchaya:sync-selection', { pickerId: this.pickerId, ids });
+                $dispatch('open-modal', { id: this.pickerId });
+            },
+
             removeSelected(id) {
                 if (Array.isArray(this.state)) {
                     this.state = this.state.filter((value) => Number.parseInt(value, 10) !== Number.parseInt(id, 10));
@@ -280,7 +289,7 @@
                     size="sm"
                     color="gray"
                     icon="heroicon-o-folder-open"
-                    x-on:click="$dispatch('open-modal', { id: '{{ $fieldKey }}' })"
+                    x-on:click="openPicker()"
                 >
                     <span x-text="selectedCount() === 0 ? '{{ $isMultiple ? 'Choose Files' : 'Choose File' }}' : 'Change'"></span>
                 </x-filament::button>
