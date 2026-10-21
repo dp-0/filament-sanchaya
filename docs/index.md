@@ -31,6 +31,15 @@ layout: page
 <section class="sanchaya-section sanchaya-changelog">
   <h2>Changelog</h2>
   <div class="release">
+    <div class="release-version">v1.1.3</div>
+    <div>
+      <ul>
+        <li>Fixed SanchayaColumn and SanchayaEntry compatibility with newer Filament v5 image URL method signatures.</li>
+        <li>Fixed package tests in a clean Laravel application by registering the test namespace in the test bootstrap.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="release">
     <div class="release-version">v1.1.2</div>
     <div>
       <ul>
