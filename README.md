@@ -4,7 +4,7 @@ A file manager and media picker plugin for Laravel and Filament.
 
 ## Documentation
 
-Documentation for the current v1.1 series, including the v1.1.1 fixes, is available at [filament-sanchaya.dineshphuyel.com.np](https://filament-sanchaya.dineshphuyel.com.np/v1.1.0/).
+Documentation for the current v1.1 series, including the v1.1.2 fixes, is available at [filament-sanchaya.dineshphuyel.com.np](https://filament-sanchaya.dineshphuyel.com.np/v1.1.0/).
 
 ## Requirements
 

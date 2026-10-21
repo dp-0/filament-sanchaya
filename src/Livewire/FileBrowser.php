@@ -275,6 +275,30 @@ abstract class FileBrowser extends Component implements HasSchemas
     }
 
     #[Computed]
+    public function trashBreadcrumbs(): Collection
+    {
+        if (! $this->isTrash || $this->currentFolderId === null) {
+            return collect();
+        }
+
+        $breadcrumbs = collect();
+        $folderId = $this->currentFolderId;
+
+        while ($folderId !== null) {
+            $folder = $this->fileModel()::onlyTrashed()->whereKey($folderId)->first();
+
+            if (! $folder || ! $folder->is_folder || ! $this->itemIsInScope($folder)) {
+                break;
+            }
+
+            $breadcrumbs->prepend($folder);
+            $folderId = $folder->parent_id;
+        }
+
+        return $breadcrumbs->values();
+    }
+
+    #[Computed]
     public function trashedCount(): int
     {
         if (! config('filament-sanchaya.soft_deletes', true)) {
@@ -306,9 +330,19 @@ abstract class FileBrowser extends Component implements HasSchemas
     {
         $fileModel = $this->fileModel();
 
-        $query = $this->isTrash
-            ? $fileModel::onlyTrashed()->onDisk($this->disk)
-            : $fileModel::query()->onDisk($this->disk)->inFolder($this->currentFolderId);
+        if ($this->isTrash) {
+            $query = $fileModel::onlyTrashed()->onDisk($this->disk);
+
+            if ($this->search === '') {
+                if ($this->currentFolderId !== null) {
+                    $query->where('parent_id', $this->currentFolderId);
+                } else {
+                    $query->whereDoesntHave('parent', fn ($parent) => $parent->onlyTrashed());
+                }
+            }
+        } else {
+            $query = $fileModel::query()->onDisk($this->disk)->inFolder($this->currentFolderId);
+        }
 
         $this->applyDirectoryScope($query);
 
@@ -500,9 +534,26 @@ abstract class FileBrowser extends Component implements HasSchemas
         $this->unsetComputed();
     }
 
+    public function navigateTrashTo(?int $folderId): void
+    {
+        abort_unless($this->isTrash, 404);
+
+        if ($folderId !== null) {
+            $folder = $this->fileModel()::onlyTrashed()->findOrFail($folderId);
+            abort_unless($folder->is_folder && $this->itemIsInScope($folder), 404);
+        }
+
+        $this->currentFolderId = $folderId;
+        $this->checkedIds = [];
+        $this->selectAll = false;
+        $this->resetPage('sanchaya-cursor');
+        $this->unsetComputed();
+    }
+
     public function exitTrash(): void
     {
         $this->isTrash = false;
+        $this->currentFolderId = null;
         $this->checkedIds = [];
         $this->selectAll = false;
         $this->previewFileId = null;
@@ -1201,7 +1252,14 @@ abstract class FileBrowser extends Component implements HasSchemas
         $this->assertItemInScope($item);
         Gate::authorize('delete', $item);
 
+        if ($this->hasTrashedParent($item)) {
+            $this->notify('warning', 'Restore the parent folder first to recover this item.');
+
+            return;
+        }
+
         app($this->actionClass('delete', DeleteAction::class))->restore($item);
+        $this->leaveDeletedFolderIfCurrent($item);
         $this->unsetComputed();
         $this->notify('success', "\"{$item->display_name}\" restored.");
     }
@@ -1216,15 +1274,31 @@ abstract class FileBrowser extends Component implements HasSchemas
         $items->each(fn (SanchayaFile $item) => $this->assertItemInScope($item));
         $action = app($this->actionClass('delete', DeleteAction::class));
 
-        foreach ($items as $item) {
+        foreach ($items->sortBy(fn (SanchayaFile $item): int => strlen($item->path)) as $item) {
             Gate::authorize('delete', $item);
+
+            if (! $item->fresh()?->trashed()) {
+                continue;
+            }
+
+            if ($this->hasTrashedParent($item)) {
+                continue;
+            }
+
             $action->restore($item);
         }
 
-        $count = count($items);
+        $skipped = $this->fileModel()::onlyTrashed()->whereIn('id', $items->pluck('id'))->count();
+        $restored = $items->count() - $skipped;
         $this->clearSelection();
         $this->unsetComputed();
-        $this->notify('success', "{$count} item(s) restored.");
+        $message = "{$restored} item(s) restored.";
+
+        if ($skipped > 0) {
+            $message .= " {$skipped} item(s) still belong to a deleted folder; restore the parent folder first.";
+        }
+
+        $this->notify($skipped > 0 ? 'warning' : 'success', $message);
     }
 
     public function forceDeleteItem(int $id): void
@@ -1233,6 +1307,7 @@ abstract class FileBrowser extends Component implements HasSchemas
         $this->assertItemInScope($item);
         Gate::authorize('delete', $item);
 
+        $this->leaveDeletedFolderIfCurrent($item);
         app($this->actionClass('delete', DeleteAction::class))->forceDeleteTrashed($item);
         $this->unsetComputed();
         $this->notify('success', "\"{$item->display_name}\" permanently deleted.");
@@ -1272,9 +1347,31 @@ abstract class FileBrowser extends Component implements HasSchemas
         }
 
         $count = count($items);
+        $this->currentFolderId = null;
         $this->clearSelection();
         $this->unsetComputed();
         $this->notify('success', "Trash emptied ({$count} item(s) permanently deleted).");
+    }
+
+    protected function leaveDeletedFolderIfCurrent(SanchayaFile $item): void
+    {
+        if ($this->currentFolderId !== $item->id) {
+            return;
+        }
+
+        $parent = $item->parent_id === null
+            ? null
+            : $this->fileModel()::onlyTrashed()->find($item->parent_id);
+
+        $this->currentFolderId = ($parent && $parent->is_folder && $this->itemIsInScope($parent))
+            ? $parent->id
+            : null;
+    }
+
+    protected function hasTrashedParent(SanchayaFile $item): bool
+    {
+        return $item->parent_id !== null
+            && $this->fileModel()::onlyTrashed()->whereKey($item->parent_id)->exists();
     }
 
     public function download(int $id): mixed
@@ -1640,6 +1737,7 @@ abstract class FileBrowser extends Component implements HasSchemas
     {
         unset($this->items);
         unset($this->breadcrumbs);
+        unset($this->trashBreadcrumbs);
         unset($this->currentFolder);
         unset($this->previewFile);
         unset($this->trashedCount);
@@ -1684,8 +1782,16 @@ abstract class FileBrowser extends Component implements HasSchemas
             $this->dateTo = '';
         }
 
-        if ($this->isTrash) {
-            $this->currentFolderId = null;
+        if ($this->isTrash && $this->currentFolderId !== null) {
+            $folder = $this->fileModel()::onlyTrashed()
+                ->onDisk($this->disk)
+                ->folders()
+                ->whereKey($this->currentFolderId)
+                ->first();
+
+            if (! $folder || ! $this->isPathInDirectory($folder->path)) {
+                $this->currentFolderId = null;
+            }
         } elseif ($this->currentFolderId !== null) {
             $folder = $this->fileModel()::query()
                 ->onDisk($this->disk)

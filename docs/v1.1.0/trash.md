@@ -9,7 +9,7 @@ description: "Understand soft deletes, trash recovery, and permanent deletion be
 
 <h3>Key Capabilities</h3>
 <ul>
-    <li><strong>Dedicated Bin View:</strong> Access the Trash Bin directly from the sidebar. Shows all soft-deleted items on the current disk.</li>
+    <li><strong>Dedicated Bin View:</strong> Access the Trash Bin directly from the sidebar. The root shows deleted folders and independently deleted files on the current disk; open a deleted folder to inspect its contents.</li>
     <li><strong>One-Click Restore:</strong> Restore individual items from the context dropdown or select multiple items and click <code>Restore Selected</code>.</li>
     <li><strong>Permanent Deletion:</strong> Delete individual or selected trashed items to remove stored file contents and database records. Deleting a folder also removes its nested files, following the original folder hierarchy rather than matching every record with the same storage path.</li>
     <li><strong>Empty Trash:</strong> Purge all trashed files and folders across the selected disk with a single click.</li>
@@ -24,4 +24,6 @@ description: "Understand soft deletes, trash recovery, and permanent deletion be
 
 <p>Since v1.1.1, you can delete a folder, create another folder with the same name, and then permanently delete the old folder from Trash without deleting the new folder's files. If a stored file path has been reused, Sanchaya keeps the bytes while another file record still references that path.</p>
 
-<p>The Trash view currently lists every deleted record on the selected disk, including files inside a deleted folder. Those child files can therefore appear alongside the folder in the top-level Trash list. The folder still owns them for restore and permanent-delete operations; this is a display behavior, not an extra copy of the files.</p>
+<p>From v1.1.2, deleted folder contents no longer appear as separate root-level items. Open a deleted folder to inspect its files and subfolders, and use the breadcrumbs to return to the Trash root. Search checks all trashed items, including files nested inside deleted folders. The Trash badge counts all deleted records, while the root list shows only top-level entries.</p>
+
+<p>Restore a deleted folder to recover its contents. A child cannot be restored on its own while its parent folder remains deleted; Sanchaya asks you to restore the parent first. Permanently deleting a folder removes its descendants. Empty Trash still purges every deleted item on the selected disk.</p>

@@ -351,6 +351,177 @@ class FileManagerLivewireTest extends TestCase
         $this->assertFalse($file->trashed());
     }
 
+    public function test_trash_shows_deleted_folder_contents_only_inside_that_folder(): void
+    {
+        $folder = SanchayaFile::create([
+            'type' => 'folder', 'disk' => 'public', 'path' => 'test',
+            'file_name' => 'test', 'original_name' => 'Test Folder',
+        ]);
+        $nested = SanchayaFile::create([
+            'parent_id' => $folder->id, 'type' => 'folder', 'disk' => 'public',
+            'path' => 'test/nested', 'file_name' => 'nested', 'original_name' => 'Nested Folder',
+        ]);
+        $child = SanchayaFile::create([
+            'parent_id' => $folder->id, 'type' => 'file', 'disk' => 'public',
+            'path' => 'test/child.jpg', 'file_name' => 'child.jpg', 'original_name' => 'Child Image',
+        ]);
+        $grandchild = SanchayaFile::create([
+            'parent_id' => $nested->id, 'type' => 'file', 'disk' => 'public',
+            'path' => 'test/nested/deep.jpg', 'file_name' => 'deep.jpg', 'original_name' => 'Deep Image',
+        ]);
+        $standalone = SanchayaFile::create([
+            'type' => 'file', 'disk' => 'public', 'path' => 'standalone.jpg',
+            'file_name' => 'standalone.jpg', 'original_name' => 'Standalone Image',
+        ]);
+
+        $folder->delete();
+        $standalone->delete();
+
+        Livewire::test(FileManager::class)
+            ->call('openTrash')
+            ->assertSee('Test Folder')
+            ->assertSee('Standalone Image')
+            ->assertDontSee('Child Image')
+            ->assertDontSee('Nested Folder')
+            ->assertDontSee('Deep Image')
+            ->call('navigateTrashTo', $folder->id)
+            ->assertSet('isTrash', true)
+            ->assertSee('Child Image')
+            ->assertSee('Nested Folder')
+            ->assertDontSee('Deep Image')
+            ->call('navigateTrashTo', $nested->id)
+            ->assertSee('Deep Image')
+            ->assertDontSee('Child Image')
+            ->call('navigateTrashTo', null)
+            ->assertSee('Test Folder')
+            ->assertDontSee('Child Image');
+
+        $this->assertTrue($child->fresh()->trashed());
+        $this->assertTrue($grandchild->fresh()->trashed());
+    }
+
+    public function test_trash_search_finds_nested_items_and_restore_returns_to_root(): void
+    {
+        $this->actingAs(User::create([
+            'name' => 'Admin', 'email' => 'trash-search@example.com', 'password' => 'secret',
+        ]));
+
+        $folder = SanchayaFile::create([
+            'type' => 'folder', 'disk' => 'public', 'path' => 'test',
+            'file_name' => 'test', 'original_name' => 'Test Folder',
+        ]);
+        $child = SanchayaFile::create([
+            'parent_id' => $folder->id, 'type' => 'file', 'disk' => 'public',
+            'path' => 'test/child.jpg', 'file_name' => 'child.jpg', 'original_name' => 'Child Image',
+        ]);
+        $folder->delete();
+
+        Livewire::test(FileManager::class)
+            ->call('openTrash')
+            ->set('search', 'Child Image')
+            ->assertSee('Child Image')
+            ->set('search', '')
+            ->call('navigateTrashTo', $folder->id)
+            ->call('restoreItem', $folder->id)
+            ->assertSet('currentFolderId', null);
+
+        $this->assertFalse($folder->fresh()->trashed());
+        $this->assertFalse($child->fresh()->trashed());
+    }
+
+    public function test_trash_keeps_individually_deleted_files_visible_and_returns_after_purging_a_folder(): void
+    {
+        $this->actingAs(User::create([
+            'name' => 'Admin', 'email' => 'trash-purge@example.com', 'password' => 'secret',
+        ]));
+
+        $deletedFolder = SanchayaFile::create([
+            'type' => 'folder', 'disk' => 'public', 'path' => 'deleted',
+            'file_name' => 'deleted', 'original_name' => 'Deleted Folder',
+        ]);
+        $nestedFile = SanchayaFile::create([
+            'parent_id' => $deletedFolder->id, 'type' => 'file', 'disk' => 'public',
+            'path' => 'deleted/nested.jpg', 'file_name' => 'nested.jpg', 'original_name' => 'Nested Image',
+        ]);
+        $activeFolder = SanchayaFile::create([
+            'type' => 'folder', 'disk' => 'public', 'path' => 'active',
+            'file_name' => 'active', 'original_name' => 'Active Folder',
+        ]);
+        $individuallyDeleted = SanchayaFile::create([
+            'parent_id' => $activeFolder->id, 'type' => 'file', 'disk' => 'public',
+            'path' => 'active/removed.jpg', 'file_name' => 'removed.jpg', 'original_name' => 'Removed Image',
+        ]);
+
+        $deletedFolder->delete();
+        $individuallyDeleted->delete();
+
+        Livewire::test(FileManager::class)
+            ->call('openTrash')
+            ->assertSee('Deleted Folder')
+            ->assertSee('Removed Image')
+            ->assertDontSee('Nested Image')
+            ->call('navigateTrashTo', $deletedFolder->id)
+            ->assertSee('Nested Image')
+            ->call('forceDeleteItem', $deletedFolder->id)
+            ->assertSet('currentFolderId', null)
+            ->assertSee('Removed Image');
+
+        $this->assertDatabaseMissing('sanchaya_files', ['id' => $deletedFolder->id]);
+        $this->assertDatabaseMissing('sanchaya_files', ['id' => $nestedFile->id]);
+    }
+
+    public function test_trash_does_not_restore_a_child_without_its_deleted_parent(): void
+    {
+        $this->actingAs(User::create([
+            'name' => 'Admin', 'email' => 'trash-restore@example.com', 'password' => 'secret',
+        ]));
+
+        $folder = SanchayaFile::create([
+            'type' => 'folder', 'disk' => 'public', 'path' => 'test',
+            'file_name' => 'test', 'original_name' => 'Test Folder',
+        ]);
+        $child = SanchayaFile::create([
+            'parent_id' => $folder->id, 'type' => 'file', 'disk' => 'public',
+            'path' => 'test/child.jpg', 'file_name' => 'child.jpg', 'original_name' => 'Child Image',
+        ]);
+        $folder->delete();
+
+        Livewire::test(FileManager::class)
+            ->call('openTrash')
+            ->call('navigateTrashTo', $folder->id)
+            ->call('restoreItem', $child->id)
+            ->assertDispatched('sanchaya:notify', type: 'warning', message: 'Restore the parent folder first to recover this item.');
+
+        $this->assertTrue($child->fresh()->trashed());
+        $this->assertTrue($folder->fresh()->trashed());
+    }
+
+    public function test_bulk_restore_recovers_a_selected_folder_and_its_selected_child_once(): void
+    {
+        $this->actingAs(User::create([
+            'name' => 'Admin', 'email' => 'trash-bulk@example.com', 'password' => 'secret',
+        ]));
+
+        $folder = SanchayaFile::create([
+            'type' => 'folder', 'disk' => 'public', 'path' => 'test',
+            'file_name' => 'test', 'original_name' => 'Test Folder',
+        ]);
+        $child = SanchayaFile::create([
+            'parent_id' => $folder->id, 'type' => 'file', 'disk' => 'public',
+            'path' => 'test/child.jpg', 'file_name' => 'child.jpg', 'original_name' => 'Child Image',
+        ]);
+        $folder->delete();
+
+        Livewire::test(FileManager::class)
+            ->call('openTrash')
+            ->set('checkedIds', [$child->id, $folder->id])
+            ->call('bulkRestore')
+            ->assertDispatched('sanchaya:notify', type: 'success', message: '2 item(s) restored.');
+
+        $this->assertFalse($folder->fresh()->trashed());
+        $this->assertFalse($child->fresh()->trashed());
+    }
+
     public function test_file_picker_dispatches_selection_event(): void
     {
         $file = SanchayaFile::create([

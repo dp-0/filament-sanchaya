@@ -9,10 +9,27 @@
         <span>Root</span>
     </button>
     <x-filament::icon icon="heroicon-m-chevron-right" class="w-3 h-3 text-gray-400 flex-shrink-0"  />
-    <span class="font-medium text-danger-700 dark:text-danger-400 flex items-center gap-1 flex-shrink-0">
-        <x-filament::icon icon="heroicon-m-trash" class="w-3.5 h-3.5"  />
-        Trash
-    </span>
+    @if ($this->trashBreadcrumbs->isEmpty())
+        <span class="font-medium text-danger-700 dark:text-danger-400 flex items-center gap-1 flex-shrink-0">
+            <x-filament::icon icon="heroicon-m-trash" class="w-3.5 h-3.5"  />
+            Trash
+        </span>
+    @else
+        <button type="button" wire:click="navigateTrashTo(null)" class="text-danger-700 dark:text-danger-400 hover:underline flex items-center gap-1 flex-shrink-0">
+            <x-filament::icon icon="heroicon-m-trash" class="w-3.5 h-3.5"  />
+            Trash
+        </button>
+        @foreach ($this->trashBreadcrumbs as $crumb)
+            <x-filament::icon icon="heroicon-m-chevron-right" class="w-3 h-3 text-gray-400 flex-shrink-0"  />
+            @if ($loop->last)
+                <span class="font-medium text-danger-700 dark:text-danger-400 flex-shrink-0">{{ $crumb->display_name }}</span>
+            @else
+                <button type="button" wire:click="navigateTrashTo({{ $crumb->id }})" class="text-gray-500 dark:text-gray-400 hover:text-danger-700 dark:hover:text-danger-400 flex-shrink-0">
+                    {{ $crumb->display_name }}
+                </button>
+            @endif
+        @endforeach
+    @endif
 </nav>
 @elseif ($this->breadcrumbs->isNotEmpty() || $currentFolderId !== null)
 <nav class="flex items-center gap-1 px-4 py-2 text-sm bg-gray-50 dark:bg-gray-900/50 border-b border-gray-200 dark:border-gray-700 overflow-x-auto whitespace-nowrap">

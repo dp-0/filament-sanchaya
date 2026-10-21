@@ -19,7 +19,7 @@
     $canDelete = ! $isTrash && (bool) ($deleteAction['enabled'] ?? true);
     $hasRowActions = $isTrash || (! $isFolder && ($canPreview || $canDownload)) || $canRename || $canMove || $canCopy || $canDelete;
     $itemClickAction = $isTrash
-        ? null
+        ? ($isFolder ? "navigateTrashTo({$item->id})" : null)
         : ($isFolder
             ? "navigateTo({$item->id})"
             : ($isPicker
@@ -58,6 +58,13 @@
     {{-- Thumbnail / Icon area --}}
     <div
         class="aspect-square rounded-t-xl overflow-hidden flex items-center justify-center bg-gray-100 dark:bg-gray-700"
+        @if ($isTrash && $isFolder)
+            role="button"
+            tabindex="0"
+            aria-label="Open deleted folder {{ $item->display_name }}"
+            x-on:keydown.enter.prevent="$wire.navigateTrashTo({{ $item->id }})"
+            x-on:keydown.space.prevent="$wire.navigateTrashTo({{ $item->id }})"
+        @endif
         @if ($itemClickAction)
             x-on:click.stop
             wire:click.stop="{{ $itemClickAction }}"
@@ -85,7 +92,7 @@
                     default                      => 'heroicon-o-document',
                 };
             @endphp
-            <x-dynamic-component :component="$icon" class="w-12 h-12 text-gray-400" />
+            <x-filament::icon :icon="$icon" class="w-12 h-12 text-gray-400" />
         @endif
     </div>
 

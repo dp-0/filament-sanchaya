@@ -31,6 +31,16 @@ layout: page
 <section class="sanchaya-section sanchaya-changelog">
   <h2>Changelog</h2>
   <div class="release">
+    <div class="release-version">v1.1.2</div>
+    <div>
+      <ul>
+        <li>Organized Trash into navigable deleted folders instead of repeating their contents at the root.</li>
+        <li>Kept nested Trash search, breadcrumbs, and restore behavior clear and safe.</li>
+        <li>Completed Filament icon-wrapper coverage for file-grid icons.</li>
+      </ul>
+    </div>
+  </div>
+  <div class="release">
     <div class="release-version">v1.1.1</div>
     <div>
       <ul>

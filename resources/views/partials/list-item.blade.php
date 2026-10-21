@@ -18,7 +18,7 @@
     $canDelete = ! $isTrash && (bool) ($deleteAction['enabled'] ?? true);
     $hasRowActions = $isTrash || (! $isFolder && ($canPreview || $canDownload)) || $canRename || $canMove || $canCopy || $canDelete;
     $itemClickAction = $isTrash
-        ? null
+        ? ($isFolder ? "navigateTrashTo({$item->id})" : null)
         : ($isFolder
             ? "navigateTo({$item->id})"
             : ($isPicker
@@ -50,6 +50,13 @@
     <td class="px-3 py-2">
         <div
             class="flex items-center gap-2 {{ $itemClickAction ? 'cursor-pointer' : '' }}"
+            @if ($isTrash && $isFolder)
+                role="button"
+                tabindex="0"
+                aria-label="Open deleted folder {{ $item->display_name }}"
+                x-on:keydown.enter.prevent="$wire.navigateTrashTo({{ $item->id }})"
+                x-on:keydown.space.prevent="$wire.navigateTrashTo({{ $item->id }})"
+            @endif
             @if ($itemClickAction)
                 x-on:click.stop
                 wire:click.stop="{{ $itemClickAction }}"

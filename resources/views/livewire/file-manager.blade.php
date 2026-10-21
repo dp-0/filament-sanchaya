@@ -96,6 +96,11 @@
 				</x-filament::button>
 			</div>
 		</div>
+		@if ($search !== '')
+			<p class="px-4 py-1.5 text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">Search results across Trash, including files in deleted folders.</p>
+		@elseif ($currentFolderId !== null)
+			<p class="px-4 py-1.5 text-xs text-gray-600 dark:text-gray-300 bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-700">To recover items here, restore their parent folder from Trash.</p>
+		@endif
 	@endif
 
 	@if (count($checkedIds) > 0)
@@ -198,7 +203,7 @@
 							text-gray-400 dark:text-gray-500">
 					@if ($isTrash)
 						<x-filament::icon icon="heroicon-o-trash" class="w-16 h-16 mb-3 opacity-40 text-danger-400"  />
-						<p class="text-sm font-medium">Trash is empty.</p>
+						<p class="text-sm font-medium">{{ $search !== '' ? 'No deleted items match your search.' : ($currentFolderId === null ? 'Trash is empty.' : 'This deleted folder is empty.') }}</p>
 					@else
 						<x-filament::icon icon="heroicon-o-folder-open" class="w-16 h-16 mb-3 opacity-40"  />
 						<p class="text-sm font-medium">
